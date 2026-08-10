@@ -30,11 +30,9 @@ jobs:
 
       - name: Instalar dependencias
         run: flutter pub get
-        working-directory: ./frontend
 
       - name: Build Web
         run: flutter build web --base-href "/G.R.U/" --release
-        working-directory: ./frontend
 
       - name: Configurar Pages
         uses: actions/configure-pages@v4
@@ -42,7 +40,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './frontend/build/web'
+          path: './build/web'
 
       - name: Deploy para GitHub Pages
         id: deployment
