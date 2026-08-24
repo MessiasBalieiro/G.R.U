@@ -3,7 +3,13 @@ import '../models/coletor_model.dart';
 import '../models/lixeira_model.dart';
 import '../models/relatorio_model.dart';
 
-/// Fonte de dados representativos.
+/// Fonte de dados fake (em memória) usada pelas telas enquanto o backend
+/// não expõe os endpoints de login, cadastro e criação de lixeira
+/// (hoje `backend/src` só tem GET /all-users, /all-trashes, all-residues).
+///
+/// Quando os endpoints reais existirem, troque as implementações dos
+/// repositórios em `data/repositories` para chamar a API via `http`,
+/// mantendo a mesma assinatura de métodos usada pelas telas.
 class MockDataService {
   MockDataService._();
   static final MockDataService instance = MockDataService._();

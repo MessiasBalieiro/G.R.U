@@ -3,7 +3,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../routes/app_routes.dart';
 
-/// Rodapé simples usado nas páginas públicas.
+/// Rodapé simples usado nas páginas públicas (Home).
 class AppFooter extends StatelessWidget {
   const AppFooter({super.key});
 

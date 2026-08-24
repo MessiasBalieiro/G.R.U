@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_images.dart';
 
 /// Linha com os botões de login social (Google / Apple / Microsoft)
+/// que aparecem nas telas de Login e Cadastro, usando os logos reais.
+///
+/// Aqui eles são apenas visuais (sem SDK de autenticação social integrado).
+/// Ligue os `onPressed` a um provider real quando for integrar.
 class SocialLoginRow extends StatelessWidget {
   const SocialLoginRow({
     super.key,

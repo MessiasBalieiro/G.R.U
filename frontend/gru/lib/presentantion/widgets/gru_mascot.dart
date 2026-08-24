@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_images.dart';
 
 /// Ícone/mascote do G.R.U.
+///
+/// Usa a imagem real do mascote enviada no design
+/// (`assets/images/gru_mascot.png`).
 class GruMascot extends StatelessWidget {
   const GruMascot({super.key, this.size = 32});
 

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 /// Pequeno helper de responsividade.
+///
+/// O design original foi pensado em layout mobile (~390px), mas o projeto
+/// também compila para Web/Desktop. Este helper deixa as telas usarem um
+/// container central com largura máxima, e decide quando empilhar colunas
+/// (mobile) versus colocá-las lado a lado (telas largas).
 class Responsive {
   Responsive._();
 
@@ -11,7 +16,8 @@ class Responsive {
       MediaQuery.sizeOf(context).width < mobileBreakpoint;
 }
 
-/// Envolve o conteúdo de uma página em um container centralizado
+/// Envolve o conteúdo de uma página em um container centralizado,
+/// limitando a largura em telas grandes (comportamento típico de site).
 class PageContainer extends StatelessWidget {
   const PageContainer({
     super.key,

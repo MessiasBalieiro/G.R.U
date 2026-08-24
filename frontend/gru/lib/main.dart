@@ -7,7 +7,7 @@ void main() {
   runApp(const GruApp());
 }
 
-/// App raiz do G.R.U Gerenciador de Resíduos Urbanos.
+/// App raiz do G.R.U (Gerenciador de Resíduos Urbanos).
 class GruApp extends StatelessWidget {
   const GruApp({super.key});
 

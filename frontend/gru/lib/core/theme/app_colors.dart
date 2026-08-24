@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// Paleta de cores oficial do G.R.U (Gerenciador de Resíduos Urbanos).
+///
+/// As três cores abaixo são as únicas cores de marca definidas no design.
+/// Todo o resto (tons de cinza, branco, preto) é usado como apoio.
 class AppColors {
   AppColors._();
 
@@ -12,11 +15,12 @@ class AppColors {
   /// telas de autenticação e como cor de "sucesso"/ação positiva.
   static const Color green = Color(0xFF2ECC71);
 
-  /// Azul escuro - usado como cor de fundo dos cards "Quem Somos",
+  /// Azul petróleo escuro - usado como cor de fundo dos cards "Quem Somos",
   /// do painel de Login/Cadastro e como cor de texto principal.
   static const Color dark = Color(0xFF2C3E50);
 
-  // Tons derivados
+  // Tons derivados (variações de opacidade/luminosidade das cores acima),
+  // usados só para dar profundidade a sombras, bordas e estados de hover.
   static const Color orangeDark = Color(0xFFC7650F);
   static const Color orangeLight = Color(0xFFFFB877);
   static const Color greenDark = Color(0xFF239954);

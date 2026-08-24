@@ -1,4 +1,7 @@
 /// Textos estáticos usados nas telas.
+///
+/// Mantidos centralizados para facilitar troca de copy no futuro
+/// (e uma eventual internacionalização, se o projeto crescer).
 class AppStrings {
   AppStrings._();
 

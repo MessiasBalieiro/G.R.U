@@ -1,4 +1,7 @@
 // Teste básico de smoke test do app G.R.U.
+//
+// Garante que o app sobe na Home sem erros e que o botão de Login
+// leva até a tela de Login.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

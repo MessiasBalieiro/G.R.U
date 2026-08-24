@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../widgets/gru_mascot.dart';
-import '../../widgets/wave_shapes.dart';
+import '../../widgets/animated_svg_wave.dart';
 
 class AppDownloadScreen extends StatelessWidget {
   const AppDownloadScreen({super.key});
@@ -14,23 +14,27 @@ class AppDownloadScreen extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(
-              top: 0,
+              top: -10,
               left: 0,
-              right: 0,
-              child: CornerWave(
-                color: AppColors.green.withValues(alpha: 0.85),
+              child: AnimatedSvgWave(
+                assetPath: AppWaves.cornerGreenBottom,
+                width: 300,
                 height: 110,
-                corner: WaveCorner.topLeft,
+                fit: BoxFit.fill,
+                amplitude: 8,
+                period: const Duration(seconds: 5),
               ),
             ),
             Positioned(
-              bottom: 0,
-              left: 0,
+              bottom: -10,
               right: 0,
-              child: CornerWave(
-                color: AppColors.dark,
-                height: 90,
-                corner: WaveCorner.bottomRight,
+              child: AnimatedSvgWave(
+                assetPath: AppWaves.cornerDark,
+                width: 300,
+                height: 100,
+                fit: BoxFit.fill,
+                amplitude: 8,
+                period: const Duration(seconds: 6),
               ),
             ),
             Padding(

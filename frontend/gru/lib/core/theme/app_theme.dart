@@ -3,7 +3,8 @@ import 'app_colors.dart';
 
 /// Tema global do aplicativo G.R.U.
 ///
-/// Centraliza tipografia, cores de componentes botões, inputs, appbar
+/// Centraliza tipografia, cores de componentes (botões, inputs, appbar)
+/// para que todas as telas fiquem visualmente consistentes com o design.
 class AppTheme {
   AppTheme._();
 

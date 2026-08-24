@@ -3,10 +3,31 @@ import '../../../core/constants/app_images.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../routes/app_routes.dart';
+import '../../widgets/animated_svg_wave.dart';
 import '../../widgets/gru_mascot.dart';
 import '../../widgets/labeled_text_field.dart';
 import '../../widgets/social_login_row.dart';
-import '../../widgets/wave_shapes.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GUIA RÁPIDO: COMO MODIFICAR AS ONDAS SVG
+//
+// TAMANHO     → width / height no AnimatedSvgWave (em pixels)
+// POSIÇÃO     → mova o Positioned (top / bottom / left / right)
+// VELOCIDADE  → period: Duration(seconds: X)  — menor = mais rápido
+// INTENSIDADE → amplitude: X                  — maior = balança mais (px)
+// DIREÇÃO     → horizontal: false → eixo Y (cima/baixo) ← ondas no topo/base
+//               horizontal: true  → eixo X (esq/dir)   ← divisores laterais
+// ARQUIVO SVG → assetPath: AppWaves.nomeDaOnda
+//   AppWaves.dividerGreen      → assets/waves/wave_divider_green.svg
+//   AppWaves.dividerDark       → assets/waves/wave_divider_dark.svg
+//   AppWaves.cornerGreenTop    → assets/waves/wave_corner_green_top.svg
+//   AppWaves.cornerGreenBottom → assets/waves/wave_corner_green_bottom.svg
+//   AppWaves.cornerDark        → assets/waves/wave_corner_dark.svg
+//   AppWaves.cornerOrange      → assets/waves/wave_corner_orange.svg
+//   AppWaves.topGreen          → assets/waves/wave_top_green.svg
+//   AppWaves.bottomDark        → assets/waves/wave_bottom_dark.svg
+//   AppWaves.bottomOrange      → assets/waves/wave_bottom_orange.svg
+// ─────────────────────────────────────────────────────────────────────────────
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,7 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (!mounted) return;
     setState(() => _carregando = false);
-
     if (ok) {
       Navigator.of(context)
           .pushNamedAndRemoveUntil(AppRoutes.areaTrabalho, (_) => false);
@@ -49,8 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// Volta para a Home. Usa `pop` se possível (mantém o histórico natural),
-  /// senão navega direto para não deixar o usuário preso na tela.
   void _voltarParaHome() {
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -61,99 +79,91 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
+
     return Scaffold(
+      // Impede que o teclado mobile empurre o layout e quebre o design
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          const SplitWaveBackground(
-            leftColor: AppColors.green,
-            rightColor: AppColors.dark,
-            splitFraction: 0.53,
+          // ── FUNDO: verde esq | escuro dir ──────────────────────────
+          Positioned.fill(
+            child: Row(
+              children: [
+                Expanded(flex: 53, child: Container(color: AppColors.green)),
+                Expanded(flex: 47, child: Container(color: AppColors.dark)),
+              ],
+            ),
           ),
-          SafeArea(
-            child: LayoutBuilder(builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 700;
-              final double escala = isMobile
-                  ? 1.0
-                  : (constraints.maxWidth / 1100).clamp(1.0, 1.7).toDouble();
 
+          // ── ONDA SVG VERDE (divisor S-curve, vai-e-vem lateral) ────
+          // Para ajustar: veja o guia no topo deste arquivo
+          Positioned.fill(
+            child: LayoutBuilder(builder: (ctx, box) {
+              final splitX = box.maxWidth * 0.53;
+              const waveW = 160.0; // ← LARGURA da onda (px)
               return Stack(
                 children: [
+                  
                   Positioned(
-                    right: 24 * escala,
-                    bottom: 24 * escala,
-                    child: Opacity(
-                      opacity: 0.7,
-                      child: Image.asset(AppImages.fern, width: 90 * escala),
+                    left: splitX - waveW * 0.2,
+                    top: 0,
+                    bottom: 0,
+                    width: waveW,
+                    child: AnimatedSvgWave(
+                      assetPath: AppWaves.dividerDark,
+                      fit: BoxFit.fill,
+                      horizontal: true,
+                      amplitude: 14,
+                      period: const Duration(seconds: 7), // fase ligeiramente diferente
+                      allowDrawingOutsideViewBox: true,
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12, top: 8),
-                        child: IconButton(
-                          onPressed: _voltarParaHome,
-                          iconSize: 22 * escala,
-                          icon: const Icon(Icons.arrow_back_rounded,
-                              color: Colors.white),
-                          tooltip: 'Voltar para a Home',
-                        ),
-                      ),
-                      Expanded(
-                        child: Builder(builder: (context) {
-                          final formulario = _LoginForm(
-                            formKey: _formKey,
-                            emailController: _emailController,
-                            senhaController: _senhaController,
-                            carregando: _carregando,
-                            onSubmit: _entrar,
-                            escala: escala,
-                          );
-                          final ladoDireito = _RightPanel(
-                            isMobile: isMobile,
-                            escala: escala,
-                          );
-
-                          if (isMobile) {
-                            return SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 28, vertical: 20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  formulario,
-                                  const SizedBox(height: 48),
-                                  ladoDireito,
-                                ],
-                              ),
-                            );
-                          }
-
-                          return Row(
-                            children: [
-                              Expanded(
-                                flex: 5,
-                                child: Center(
-                                  child: ConstrainedBox(
-                                    constraints:
-                                        BoxConstraints(maxWidth: 480 * escala),
-                                    child: formulario,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 5,
-                                child: Center(child: ladoDireito),
-                              ),
-                            ],
-                          );
-                        }),
-                      ),
-                    ],
                   ),
                 ],
               );
             }),
+          ),
+
+          // ── SAMAMBAIA decorativa ──────────────────────────────────
+          // Posição → altere right / bottom
+          // Tamanho → altere width
+          Positioned(
+            right: 20,  // ← distância da borda direita
+            bottom: 20, // ← distância da borda inferior
+            child: Opacity(
+              opacity: 0.65,
+              child: Image.asset(AppImages.fern, width: 80), // ← tamanho
+            ),
+          ),
+
+          // ── CONTEÚDO ──────────────────────────────────────────────
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconButton(
+                  onPressed: _voltarParaHome,
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                ),
+                Expanded(
+                  child: isMobile
+                      ? _MobileLayout(
+                          formKey: _formKey,
+                          emailController: _emailController,
+                          senhaController: _senhaController,
+                          carregando: _carregando,
+                          onSubmit: _entrar,
+                        )
+                      : _DesktopLayout(
+                          formKey: _formKey,
+                          emailController: _emailController,
+                          senhaController: _senhaController,
+                          carregando: _carregando,
+                          onSubmit: _entrar,
+                        ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -161,14 +171,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _LoginForm extends StatelessWidget {
-  const _LoginForm({
+// ══════════════════════════════════════════════════════════════════════════════
+// DESKTOP — dois painéis, SEM scroll (cabe na tela inteira)
+// ══════════════════════════════════════════════════════════════════════════════
+class _DesktopLayout extends StatelessWidget {
+  const _DesktopLayout({
     required this.formKey,
     required this.emailController,
     required this.senhaController,
     required this.carregando,
     required this.onSubmit,
-    required this.escala,
   });
 
   final GlobalKey<FormState> formKey;
@@ -176,118 +188,242 @@ class _LoginForm extends StatelessWidget {
   final TextEditingController senhaController;
   final bool carregando;
   final VoidCallback onSubmit;
-  final double escala;
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GruMascot(size: 44 * escala),
-          SizedBox(height: 22 * escala),
-          Text(
-            'Login',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 30 * escala,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 30 * escala),
-          LabeledTextField(
-            label: 'Email',
-            controller: emailController,
-            keyboardType: TextInputType.emailAddress,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Informe seu email' : null,
-          ),
-          SizedBox(height: 22 * escala),
-          LabeledTextField(
-            label: 'Senha',
-            controller: senhaController,
-            obscureText: true,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Informe sua senha' : null,
-          ),
-          SizedBox(height: 30 * escala),
-          SocialLoginRow(iconSize: 26 * escala),
-          SizedBox(height: 26 * escala),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.dark,
-                padding: EdgeInsets.symmetric(
-                    horizontal: 30 * escala, vertical: 16 * escala),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+    return Row(
+      children: [
+        // ── Painel esquerdo (verde): formulário ─────────────────────
+        Expanded(
+          flex: 53,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(48, 0, 48, 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const GruMascot(size: 36),
+                const SizedBox(height: 14),
+                const Text(
+                  'Login',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                textStyle: TextStyle(fontSize: 15 * escala),
-              ),
-              onPressed: carregando ? null : onSubmit,
-              child: carregando
-                  ? SizedBox(
-                      width: 18 * escala,
-                      height: 18 * escala,
-                      child: const CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('Entrar'),
+                const SizedBox(height: 18),
+
+                // Container com borda branca — igual ao design
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.7), width: 1.2),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        LabeledTextField(
+                          label: 'Email',
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Informe seu email'
+                              : null,
+                        ),
+                        const SizedBox(height: 14),
+                        LabeledTextField(
+                          label: 'Senha',
+                          controller: senhaController,
+                          obscureText: true,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Informe sua senha'
+                              : null,
+                        ),
+                        const SizedBox(height: 18),
+                        const SocialLoginRow(),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.dark,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24)),
+                    ),
+                    onPressed: carregando ? null : onSubmit,
+                    child: carregando
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Entrar'),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+
+        // ── Painel direito (escuro): info ───────────────────────────
+        Expanded(
+          flex: 47,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.asset(AppImages.recyclingSymbolWhite, width: 100),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'Não possui conta?',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Se cadastre agora para poder acessar o G.R.U',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context)
+                        .pushReplacementNamed(AppRoutes.cadastro),
+                    child: const Text('Cadastre-se'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _RightPanel extends StatelessWidget {
-  const _RightPanel({required this.isMobile, required this.escala});
+// ══════════════════════════════════════════════════════════════════════════════
+// MOBILE — coluna scrollável (telas pequenas)
+// ══════════════════════════════════════════════════════════════════════════════
+class _MobileLayout extends StatelessWidget {
+  const _MobileLayout({
+    required this.formKey,
+    required this.emailController,
+    required this.senhaController,
+    required this.carregando,
+    required this.onSubmit,
+  });
 
-  final bool isMobile;
-  final double escala;
+  final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final TextEditingController senhaController;
+  final bool carregando;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 36),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment:
-            isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-        children: [
-          Image.asset(AppImages.recyclingSymbolWhite, width: 110 * escala),
-          SizedBox(height: 30 * escala),
-          Text(
-            'Não possui conta?',
-            textAlign: isMobile ? TextAlign.center : TextAlign.start,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20 * escala,
-              fontWeight: FontWeight.bold,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const GruMascot(size: 32),
+            const SizedBox(height: 12),
+            const Text('Login',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                border:
+                    Border.all(color: Colors.white.withValues(alpha: 0.7)),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LabeledTextField(
+                    label: 'Email',
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Informe seu email'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  LabeledTextField(
+                    label: 'Senha',
+                    controller: senhaController,
+                    obscureText: true,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Informe sua senha'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  const SocialLoginRow(),
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: 10 * escala),
-          Text(
-            'Se cadastre agora para poder acessar o G.R.U',
-            textAlign: isMobile ? TextAlign.center : TextAlign.start,
-            style: TextStyle(color: Colors.white70, fontSize: 14 * escala),
-          ),
-          SizedBox(height: 22 * escala),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(
-                  horizontal: 28 * escala, vertical: 14 * escala),
-              textStyle: TextStyle(fontSize: 15 * escala),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.dark),
+                onPressed: carregando ? null : onSubmit,
+                child: const Text('Entrar'),
+              ),
             ),
-            onPressed: () =>
-                Navigator.of(context).pushReplacementNamed(AppRoutes.cadastro),
-            child: const Text('Cadastre-se'),
-          ),
-        ],
+            const SizedBox(height: 40),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Image.asset(AppImages.recyclingSymbolWhite, width: 80),
+                const SizedBox(height: 16),
+                const Text('Não possui conta?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text('Se cadastre agora para poder acessar o G.R.U',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context)
+                      .pushReplacementNamed(AppRoutes.cadastro),
+                  child: const Text('Cadastre-se'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../routes/app_routes.dart';
 
-/// Volta para a Área de Trabalho
+/// Volta para a Área de Trabalho: se ela já estiver na pilha de navegação
+/// (caso comum, já que todas essas telas são abertas a partir dela), volta
+/// até lá com `popUntil`. Caso contrário (acesso direto/deep link), navega
+/// até ela normalmente.
 void _irParaAreaTrabalho(BuildContext context) {
   final navigator = Navigator.of(context);
   var encontrada = false;

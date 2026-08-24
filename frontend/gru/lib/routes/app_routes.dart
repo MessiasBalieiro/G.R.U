@@ -8,7 +8,9 @@ import '../presentantion/screens/workspace/cadastro_lixeira_screen.dart';
 import '../presentantion/screens/workspace/gerar_relatorio_screen.dart';
 import '../presentantion/screens/workspace/dashboard_screen.dart';
 
-/// Nomes de rota + tabela de rotas do app
+/// Nomes de rota + tabela de rotas do app, na mesma ordem das telas do
+/// design: Home, Login, Cadastro, App, Área de Trabalho, Cadastro Lixeira,
+/// Gerar Relatório e Dashboard.
 class AppRoutes {
   AppRoutes._();
 

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Card usado na seção "Quem Somos?" da Home (Problema / Solução / G.R.U).
+///
+/// Quando [imagemAsset] é informado, mostra a foto real no topo do card
+/// (como no design). Quando é nulo, o card fica só com o corpo escuro
+/// (como o card "G.R.U" no design, que não tinha foto).
 class QuemSomosCard extends StatelessWidget {
   const QuemSomosCard({
     super.key,
@@ -20,7 +24,6 @@ class QuemSomosCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.dark,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.green, width: 1.4),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Campo de texto usado nas telas de Login e Cadastro
+/// Campo de texto com rótulo acima, no estilo usado nas telas de
+/// Login e Cadastro (label branco + input em pílula branca).
 class LabeledTextField extends StatelessWidget {
   const LabeledTextField({
     super.key,

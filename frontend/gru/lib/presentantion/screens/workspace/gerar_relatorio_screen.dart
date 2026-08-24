@@ -3,9 +3,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/models/relatorio_model.dart';
 import '../../../data/services/mock_data_service.dart';
-import '../../widgets/wave_shapes.dart';
+import '../../widgets/animated_svg_wave.dart';
 import '../../widgets/workspace_header.dart';
 
+/// Tela "Gerar Relatório" - reúne as duas telas do design (lista de
+/// relatórios e preview) em um único widget com estado, trocando entre
+/// os dois momentos conforme o usuário escolhe um relatório.
 class GerarRelatorioScreen extends StatefulWidget {
   const GerarRelatorioScreen({super.key});
 
@@ -37,13 +40,15 @@ class _GerarRelatorioScreenState extends State<GerarRelatorioScreen> {
         child: Stack(
           children: [
             Positioned(
-              bottom: 0,
-              left: 0,
+              bottom: -10,
               right: 0,
-              child: CornerWave(
-                color: AppColors.orange,
-                height: 80,
-                corner: WaveCorner.bottomRight,
+              child: AnimatedSvgWave(
+                assetPath: AppWaves.cornerOrange,
+                width: 240,
+                height: 90,
+                fit: BoxFit.fill,
+                amplitude: 7,
+                period: const Duration(seconds: 5),
               ),
             ),
             PageContainer(
