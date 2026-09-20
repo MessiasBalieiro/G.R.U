@@ -15,6 +15,7 @@ import '../presentation/screens/coletor/coletor_instituicoes_screen.dart';
 import '../presentation/screens/coletor/coletor_lixeiras_screen.dart';
 import '../presentation/screens/shared/lixeira_detalhe_screen.dart';
 import '../presentation/screens/splash/loading_screen.dart';
+import 'gru_page_route.dart';
 
 /// Rotas do app, na ordem do Figma: Loading → Bem-vindo → Login/Cadastro →
 /// Home (Admin ou Coletor) → telas internas.
@@ -59,4 +60,11 @@ class AppRoutes {
         coletorInstituicoes: (_) => const ColetorInstituicoesScreen(),
         lixeira: (_) => const LixeiraDetalheScreen(),
       };
+
+  /// Cria a rota com a transição animada do G.R.U ([GruPageRoute]).
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    final builder = table[settings.name];
+    if (builder == null) return null;
+    return GruPageRoute<dynamic>(builder: builder, settings: settings);
+  }
 }

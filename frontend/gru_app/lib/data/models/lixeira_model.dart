@@ -1,3 +1,4 @@
+import '../../core/utils/cep.dart';
 import 'residuo_model.dart';
 
 /// Status da lixeira. Espelha o enum numérico `status_lixeira: [0..4]` do
@@ -31,18 +32,26 @@ enum StatusLixeira {
 
 /// Lixeira inteligente.
 ///
+/// A localização é o endereço estruturado a partir do **CEP** ([cep],
+/// [logradouro], [numero], [bairro], [cidade], [uf]); o mapa abre buscando
+/// esse endereço.
+///
 /// Campos novos em relação ao `trash.model.js` do backend (necessários para
 /// o app do coletor): [ocupacao] (% de capacidade usada), [composicao]
-/// (% de cada tipo de resíduo lido pelos sensores), [latitude]/[longitude]
-/// (no backend hoje é uma string `coordenada`) e [ultimaColeta].
+/// (% de cada tipo de resíduo lido pelos sensores), os campos de endereço
+/// (hoje o backend guarda uma string `coordenada`) e [ultimaColeta].
 class LixeiraModel {
   LixeiraModel({
     required this.id,
     required this.nome,
     required this.instituicaoId,
-    required this.endereco,
-    required this.latitude,
-    required this.longitude,
+    required this.cep,
+    required this.logradouro,
+    required this.numero,
+    this.complemento,
+    required this.bairro,
+    required this.cidade,
+    required this.uf,
     this.ocupacao = 0,
     Map<TipoResiduo, int>? composicao,
     this.ultimaColeta,
@@ -54,9 +63,13 @@ class LixeiraModel {
 
   /// Instituição dona da lixeira (`codigo_dono_lixeira` no backend).
   final String instituicaoId;
-  final String endereco;
-  final double latitude;
-  final double longitude;
+  final String cep;
+  final String logradouro;
+  final String numero;
+  final String? complemento;
+  final String bairro;
+  final String cidade;
+  final String uf;
   final String? observacoes;
 
   /// Porcentagem da capacidade em uso (0 a 100).
@@ -74,8 +87,23 @@ class LixeiraModel {
   /// Nome sem o prefixo "Lixeira " (para rótulos curtos de gráfico).
   String get nomeCurto => nome.replaceFirst(RegExp(r'^Lixeira\s+'), '');
 
-  String get coordenadaTexto =>
-      '${latitude.toStringAsFixed(4)}, ${longitude.toStringAsFixed(4)}';
+  String get cepFormatado => Cep.formatar(cep);
+
+  /// Linha curta para listas: "Rua X, 123 · Bairro".
+  String get endereco => '$logradouro, $numero · $bairro';
+
+  /// "Rua X, 123 - Apto 4".
+  String get logradouroNumero {
+    final c = (complemento ?? '').trim();
+    return c.isEmpty ? '$logradouro, $numero' : '$logradouro, $numero - $c';
+  }
+
+  /// "Bairro · Cidade - UF".
+  String get bairroCidade => '$bairro · $cidade - $uf';
+
+  /// Endereço completo, usado na busca do mapa.
+  String get enderecoCompleto =>
+      '$logradouro, $numero, $bairro, $cidade - $uf, $cepFormatado';
 
   /// Material mais concentrado na lixeira, ou `null` se não há dados.
   TipoResiduo? get materialPredominante {
@@ -99,8 +127,11 @@ class LixeiraModel {
         '_id': id,
         'nome_lixeira': nome,
         'codigo_dono_lixeira': instituicaoId,
-        'endereco_lixeira': endereco,
-        'coordenada': '$latitude,$longitude',
+        'cep': cepFormatado,
+        'endereco_lixeira': logradouroNumero,
+        'bairro': bairro,
+        'cidade': cidade,
+        'uf': uf,
         'status_lixeira': status.codigo,
         'ocupacao': ocupacao,
         if (observacoes != null) 'outras_informacoes': observacoes,

@@ -22,7 +22,7 @@ class GruApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: AppRoutes.loading,
-      routes: AppRoutes.table,
+      onGenerateRoute: AppRoutes.onGenerateRoute,
     );
   }
 }

@@ -422,15 +422,21 @@ class _LocalizacaoCard extends StatelessWidget {
         children: [
           const _Titulo(icone: Icons.place_rounded, texto: 'Localização'),
           const SizedBox(height: 12),
-          Text(l.endereco,
+          Text(l.logradouroNumero,
               style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.dark)),
           const SizedBox(height: 3),
-          Text('Coordenadas: ${l.coordenadaTexto}',
+          Text(l.bairroCidade,
               style: const TextStyle(
-                  fontSize: 12, color: AppColors.textMuted)),
+                  fontSize: 12.5, color: AppColors.textMuted)),
+          const SizedBox(height: 3),
+          Text('CEP ${l.cepFormatado}',
+              style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted)),
           if (l.observacoes != null) ...[
             const SizedBox(height: 3),
             Text(l.observacoes!,

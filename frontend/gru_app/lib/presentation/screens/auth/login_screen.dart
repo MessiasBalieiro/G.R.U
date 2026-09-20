@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/gru_button.dart';
 import '../../widgets/gru_mascot.dart';
-import '../../widgets/gru_scaffold.dart';
+import 'auth_background.dart';
 import '../../widgets/gru_text_field.dart';
 import '../../widgets/social_login_row.dart';
 
@@ -54,62 +53,67 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return GruSystemUi(
-      navColor: AppColors.green,
-      child: Scaffold(
-        backgroundColor: AppColors.green,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(8, 8, 24, 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            size: 18, color: Colors.white),
-                      ),
-                      const GruMascot(size: 48),
-                    ],
-                  ),
-                  SizedBox(height: MediaQuery.sizeOf(context).height * 0.09),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return AuthBlobBackground.login(
+      child: Form(
+        key: _formKey,
+        child: CustomScrollView(
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        GruTextField(
-                          label: 'Email',
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: Validators.email,
+                        IconButton(
+                          onPressed: () => Navigator.maybePop(context),
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                              size: 18, color: Colors.white),
                         ),
-                        const SizedBox(height: 18),
-                        GruTextField(
-                          label: 'Senha',
-                          controller: _senha,
-                          obscure: true,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _entrar(),
-                          validator: (v) => Validators.obrigatorio(v, 'Senha'),
-                        ),
-                        const SizedBox(height: 28),
-                        const Center(child: SocialLoginRow()),
-                        const SizedBox(height: 28),
-                        Center(
-                          child: GruButton(
+                        const GruMascot(size: 48),
+                      ],
+                    ),
+                    SizedBox(height: MediaQuery.sizeOf(context).height * 0.07),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GruTextField(
+                            label: 'Email',
+                            controller: _email,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: Validators.email,
+                          ),
+                          const SizedBox(height: 18),
+                          GruTextField(
+                            label: 'Senha',
+                            controller: _senha,
+                            obscure: true,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _entrar(),
+                            validator: (v) =>
+                                Validators.obrigatorio(v, 'Senha'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Empurra social + botão para a região da forma escura.
+                    const Spacer(flex: 2),
+                    Center(
+                      child: Column(
+                        children: [
+                          const SocialLoginRow(),
+                          const SizedBox(height: 28),
+                          GruButton(
                             label: 'Login',
                             loading: _carregando,
                             onPressed: _entrar,
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Center(
-                          child: TextButton(
+                          const SizedBox(height: 12),
+                          TextButton(
                             onPressed: () => Navigator.of(context)
                                 .pushReplacementNamed(AppRoutes.cadastro),
                             child: const Text(
@@ -120,14 +124,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const Spacer(flex: 3),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

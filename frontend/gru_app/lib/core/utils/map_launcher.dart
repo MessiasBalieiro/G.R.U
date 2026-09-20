@@ -3,19 +3,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models/lixeira_model.dart';
 
-/// Abre a localização da lixeira no app de mapas do celular.
+/// Abre o endereço da lixeira (montado a partir do CEP) no app de mapas.
 ///
 /// Tenta primeiro o esquema `geo:` (Google Maps, Waze, etc. — o Android deixa
 /// o usuário escolher) e, se não houver app, cai para o Google Maps no
 /// navegador.
 Future<void> abrirNoMapa(BuildContext context, LixeiraModel l) async {
-  final label = Uri.encodeComponent(l.nome);
-  final geo = Uri.parse(
-    'geo:${l.latitude},${l.longitude}?q=${l.latitude},${l.longitude}($label)',
-  );
-  final web = Uri.parse(
-    'https://www.google.com/maps/search/?api=1&query=${l.latitude},${l.longitude}',
-  );
+  final consulta = Uri.encodeComponent(l.enderecoCompleto);
+  final geo = Uri.parse('geo:0,0?q=$consulta');
+  final web =
+      Uri.parse('https://www.google.com/maps/search/?api=1&query=$consulta');
 
   var ok = false;
   try {

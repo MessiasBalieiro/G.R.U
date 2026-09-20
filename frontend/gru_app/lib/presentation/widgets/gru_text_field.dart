@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Campo com rótulo acima e input em pílula branca (Login/Cadastro).
 class GruTextField extends StatefulWidget {
@@ -13,6 +14,10 @@ class GruTextField extends StatefulWidget {
     this.onSubmitted,
     this.labelColor = Colors.white,
     this.hint,
+    this.inputFormatters,
+    this.onChanged,
+    this.suffix,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   final String label;
@@ -24,6 +29,12 @@ class GruTextField extends StatefulWidget {
   final void Function(String)? onSubmitted;
   final Color labelColor;
   final String? hint;
+  final List<TextInputFormatter>? inputFormatters;
+  final ValueChanged<String>? onChanged;
+
+  /// Widget no fim do campo (ignorado quando [obscure] é verdadeiro).
+  final Widget? suffix;
+  final TextCapitalization textCapitalization;
 
   @override
   State<GruTextField> createState() => _GruTextFieldState();
@@ -53,6 +64,9 @@ class _GruTextFieldState extends State<GruTextField> {
           validator: widget.validator,
           textInputAction: widget.textInputAction,
           onFieldSubmitted: widget.onSubmitted,
+          onChanged: widget.onChanged,
+          inputFormatters: widget.inputFormatters,
+          textCapitalization: widget.textCapitalization,
           decoration: InputDecoration(
             hintText: widget.hint,
             suffixIcon: widget.obscure
@@ -65,7 +79,7 @@ class _GruTextFieldState extends State<GruTextField> {
                       size: 20,
                     ),
                   )
-                : null,
+                : widget.suffix,
           ),
         ),
       ],

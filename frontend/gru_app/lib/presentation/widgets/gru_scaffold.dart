@@ -55,6 +55,9 @@ class GruScaffold extends StatelessWidget {
       child: Scaffold(
         backgroundColor: background,
         body: Stack(
+          // Sem isso o Stack encolhe (Scaffold dá altura solta) e a onda
+          // deixa de ficar no rodapé da tela.
+          fit: StackFit.expand,
           children: [
             if (showWave) const BottomWave(),
             SafeArea(

@@ -20,4 +20,7 @@ class AppWaves {
 
   /// Forma verde das telas de cadastro (Vector.svg do Figma).
   static const greenBlob = 'assets/waves/mobile_blob_green.svg';
+
+  /// Forma azul-escura da tela de login (Vector (1).svg do Figma).
+  static const darkBlob = 'assets/waves/mobile_blob_dark.svg';
 }

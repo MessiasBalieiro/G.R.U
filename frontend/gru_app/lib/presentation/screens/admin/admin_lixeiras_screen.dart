@@ -55,7 +55,8 @@ class _AdminLixeirasScreenState extends State<AdminLixeirasScreen> {
             .where((l) =>
                 termo.isEmpty ||
                 l.nome.toLowerCase().contains(termo) ||
-                l.endereco.toLowerCase().contains(termo))
+                l.endereco.toLowerCase().contains(termo) ||
+                    l.cep.replaceAll('-', '').contains(termo.replaceAll('-', '')))
             .toList()
           ..sort((a, b) => b.ocupacao.compareTo(a.ocupacao));
 

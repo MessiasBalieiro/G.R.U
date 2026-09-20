@@ -6,7 +6,7 @@ class SearchField extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onChanged,
-    this.hint = 'Buscar lixeira ou endereço',
+    this.hint = 'Buscar lixeira, endereço ou CEP',
   });
 
   final TextEditingController controller;
