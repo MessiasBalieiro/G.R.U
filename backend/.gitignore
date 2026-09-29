@@ -1,0 +1,3 @@
+node_modules/
+# Segredos (chave da API do Ciclo etc.). Use o .env.example como modelo.
+.env

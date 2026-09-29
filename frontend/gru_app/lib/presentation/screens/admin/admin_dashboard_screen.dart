@@ -5,19 +5,85 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/domain_styles.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../data/models/ciclo_model.dart';
 import '../../../data/models/lixeira_model.dart';
 import '../../../data/models/residuo_model.dart';
 import '../../../data/models/usuario_model.dart';
+import '../../../data/services/ciclo_service.dart';
 import '../../../data/services/mock_data_service.dart';
 import '../../../data/services/session_service.dart';
+import '../../ciclo/ciclo_chart_frame.dart';
+import '../../ciclo/ciclo_chat_sheet.dart';
+import '../../ciclo/ciclo_controller.dart';
+import '../../ciclo/ciclo_fab.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gru_scaffold.dart';
 import '../../widgets/white_card.dart';
 
 /// "Tela Dashboard - Admin": mesmos indicadores do dashboard web, em
-/// cartões brancos empilhados para caber no celular.
-class AdminDashboardScreen extends StatelessWidget {
+/// cartões brancos empilhados para caber no celular, com o assistente Ciclo.
+///
+/// Ligação Ciclo ↔ gráficos:
+///  * botão "Perguntar ao Ciclo" em cada gráfico → abre o chat já com uma
+///    pergunta sobre aquele gráfico;
+///  * cada resposta traz os gráficos que o Ciclo usou → o gráfico fica com
+///    contorno pulsante, e o chip "Ver gráfico" rola a tela até ele.
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  late final CicloController _ciclo = CicloController(
+    snapshot: () => CicloService.montarSnapshot(SessionService.instance.usuario!),
+  );
+
+  /// Uma chave por gráfico, para rolar a tela até ele.
+  final _chaves = {for (final g in CicloGrafico.values) g: GlobalKey()};
+
+  @override
+  void dispose() {
+    _ciclo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _abrirCiclo({String? pergunta}) async {
+    final grafico = await abrirCiclo(context, _ciclo, perguntaInicial: pergunta);
+    if (grafico != null && mounted) _irParaGrafico(grafico);
+  }
+
+  void _perguntarSobre(CicloGrafico g) {
+    _ciclo.destacar(g);
+    _abrirCiclo(pergunta: g.perguntaSugerida);
+  }
+
+  void _irParaGrafico(CicloGrafico g) {
+    _ciclo.destacar(g);
+    final ctx = _chaves[g]?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.15,
+      );
+    }
+  }
+
+  /// Envolve um gráfico com o destaque e o botão do Ciclo.
+  Widget _frame(CicloGrafico g, Widget child) {
+    return KeyedSubtree(
+      key: _chaves[g],
+      child: CicloChartFrame(
+        grafico: g,
+        destacado: _ciclo.destaque == g,
+        onPerguntar: _perguntarSobre,
+        child: child,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +91,7 @@ class AdminDashboardScreen extends StatelessWidget {
     final db = MockDataService.instance;
 
     return ListenableBuilder(
-      listenable: db,
+      listenable: Listenable.merge([db, _ciclo]),
       builder: (context, _) {
         final lixeiras = db.lixeirasDasInstituicoes(usuario.instituicaoIds);
         final instId = usuario.instituicaoPrincipalId;
@@ -56,9 +122,28 @@ class AdminDashboardScreen extends StatelessWidget {
         return GruScaffold(
           title: 'Dashboard',
           background: kFundoAdmin,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 150),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
+          ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 170),
+            children: [
+              _frame(CicloGrafico.kpis, Column(children: [
+              // Cabeçalho próprio: deixa espaço para o botão do Ciclo.
+              const Padding(
+                padding: EdgeInsets.fromLTRB(6, 10, 48, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Indicadores',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
               Row(
                 children: [
                   Expanded(
@@ -104,17 +189,18 @@ class AdminDashboardScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              ])),
               const SizedBox(height: 16),
-              _OcupacaoCard(lixeiras: lixeiras),
+              _frame(CicloGrafico.ocupacao, _OcupacaoCard(lixeiras: lixeiras)),
               const SizedBox(height: 16),
-              _TiposResiduoCard(lixeiras: lixeiras),
+              _frame(CicloGrafico.residuos, _TiposResiduoCard(lixeiras: lixeiras)),
               const SizedBox(height: 16),
-              _RankingCard(ranking: [
+              _frame(CicloGrafico.ranking, _RankingCard(ranking: [
                 for (final r in ranking)
                   (nome: r.coletor.nome, coletas: r.coletas),
-              ]),
+              ])),
               const SizedBox(height: 16),
-              _AtividadesCard(
+              _frame(CicloGrafico.atividades, _AtividadesCard(
                 itens: [
                   for (final v in visitas.take(5))
                     (
@@ -123,6 +209,13 @@ class AdminDashboardScreen extends StatelessWidget {
                       tempo: Fmt.relativo(v.dataHora),
                     ),
                 ],
+              )),
+            ],
+          ),
+              Positioned(
+                right: 20,
+                bottom: 28 + MediaQuery.paddingOf(context).bottom,
+                child: CicloFab(onTap: () => _abrirCiclo()),
               ),
             ],
           ),
@@ -201,7 +294,10 @@ class _CardTitulo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    // Padding à direita: espaço para o botão "Perguntar ao Ciclo".
+    return Padding(
+      padding: const EdgeInsets.only(right: 36),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(titulo,
@@ -214,6 +310,7 @@ class _CardTitulo extends StatelessWidget {
             style:
                 const TextStyle(fontSize: 12, color: AppColors.textMuted)),
       ],
+      ),
     );
   }
 }

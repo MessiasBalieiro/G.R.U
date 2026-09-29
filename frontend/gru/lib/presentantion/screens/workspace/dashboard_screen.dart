@@ -2,9 +2,15 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../data/models/ciclo_model.dart';
 import '../../../data/models/coletor_model.dart';
 import '../../../data/models/lixeira_model.dart';
+import '../../../data/services/ciclo_service.dart';
 import '../../../data/services/mock_data_service.dart';
+import '../../ciclo/ciclo_chart_frame.dart';
+import '../../ciclo/ciclo_chat_sheet.dart';
+import '../../ciclo/ciclo_controller.dart';
+import '../../ciclo/ciclo_fab.dart';
 import '../../widgets/workspace_header.dart';
 
 enum _DashboardSecao { lixeiras, coletores, outras }
@@ -18,6 +24,80 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   _DashboardSecao _secao = _DashboardSecao.lixeiras;
+
+  // ── Ciclo (chatbot do Dashboard) ────────────────────────────────────────
+  late final CicloController _ciclo =
+      CicloController(snapshot: CicloService.montarSnapshot)
+        ..addListener(_aoMudarCiclo);
+
+  /// Uma chave por gráfico, para rolar a tela até ele.
+  final _chaves = {for (final g in CicloGrafico.values) g: GlobalKey()};
+
+  void _aoMudarCiclo() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _ciclo
+      ..removeListener(_aoMudarCiclo)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// Em qual seção da barra lateral cada gráfico do Ciclo aparece.
+  static _DashboardSecao? _secaoDo(CicloGrafico g) {
+    switch (g) {
+      case CicloGrafico.ocupacao:
+      case CicloGrafico.residuos:
+        return _DashboardSecao.lixeiras;
+      case CicloGrafico.ranking:
+        return _DashboardSecao.coletores;
+      case CicloGrafico.atividades:
+        return _DashboardSecao.outras;
+      case CicloGrafico.kpis:
+        return null; // os KPIs ficam sempre visíveis no topo
+    }
+  }
+
+  Future<void> _abrirCiclo({String? pergunta}) async {
+    final g = await abrirCiclo(context, _ciclo, perguntaInicial: pergunta);
+    if (g != null && mounted) _irParaGrafico(g);
+  }
+
+  void _perguntarSobre(CicloGrafico g) {
+    _ciclo.destacar(g);
+    _abrirCiclo(pergunta: g.perguntaSugerida);
+  }
+
+  void _irParaGrafico(CicloGrafico g) {
+    final secao = _secaoDo(g);
+    if (secao != null) setState(() => _secao = secao);
+    _ciclo.destacar(g);
+    // Espera a seção ser desenhada antes de rolar até o gráfico.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _chaves[g]?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+            alignment: 0.1);
+      }
+    });
+  }
+
+  /// Envolve um gráfico com o destaque e o botão "Perguntar ao Ciclo".
+  Widget _frame(CicloGrafico g, Widget child) {
+    return KeyedSubtree(
+      key: _chaves[g],
+      child: CicloChartFrame(
+        grafico: g,
+        destacado: _ciclo.destaque == g,
+        onPerguntar: _perguntarSobre,
+        child: child,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,11 +166,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           accentColor: AppColors.green,
                         ),
                         const SizedBox(height: 16),
-                        _StatsRow(lixeiras: lixeiras),
+                        _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras)),
                         const SizedBox(height: 16),
                         sidebar,
                         const SizedBox(height: 16),
-                        _DashboardConteudo(secao: _secao, lixeiras: lixeiras),
+                        _DashboardConteudo(
+                          secao: _secao,
+                          lixeiras: lixeiras,
+                          frame: _frame,
+                        ),
                       ],
                     ),
                   );
@@ -105,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     // Faixa de KPIs sempre visível
-                    _StatsRow(lixeiras: lixeiras),
+                    _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras)),
                     const SizedBox(height: 16),
                     // Corpo principal
                     Expanded(
@@ -119,6 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: _DashboardConteudo(
                                 secao: _secao,
                                 lixeiras: lixeiras,
+                                frame: _frame,
                               ),
                             ),
                           ),
@@ -128,6 +213,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 );
               }),
+            ),
+
+            // ── CICLO: botão flutuante do chatbot ─────────────────────
+            Positioned(
+              right: 28,
+              bottom: 24,
+              child: CicloFab(onTap: () => _abrirCiclo()),
             ),
           ],
         ),
@@ -540,10 +632,17 @@ class _SidebarItem extends StatelessWidget {
 // CONTEÚDO PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════
 class _DashboardConteudo extends StatelessWidget {
-  const _DashboardConteudo({required this.secao, required this.lixeiras});
+  const _DashboardConteudo({
+    required this.secao,
+    required this.lixeiras,
+    required this.frame,
+  });
 
   final _DashboardSecao secao;
   final List<LixeiraModel> lixeiras;
+
+  /// Liga cada gráfico ao Ciclo (destaque + botão "Perguntar ao Ciclo").
+  final Widget Function(CicloGrafico, Widget) frame;
 
   @override
   Widget build(BuildContext context) {
@@ -552,7 +651,7 @@ class _DashboardConteudo extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _GraficoBarrasCard(
+            frame(CicloGrafico.ocupacao, _GraficoBarrasCard(
               titulo: 'Ocupação por lixeira',
               subtitulo: 'Nível de preenchimento atual',
               barras: [
@@ -563,12 +662,12 @@ class _DashboardConteudo extends StatelessWidget {
                     label: l.statusLixeira.label,
                   ),
               ],
-            ),
+            )),
             const SizedBox(height: 14),
-            _GraficoRosquinhaCard(
+            frame(CicloGrafico.residuos, _GraficoRosquinhaCard(
               titulo: 'Status das lixeiras',
               lixeiras: lixeiras,
-            ),
+            )),
             const SizedBox(height: 14),
             _IndicadorCard(
               icon: Icons.delete_outline_rounded,
@@ -588,6 +687,9 @@ class _DashboardConteudo extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            frame(CicloGrafico.ranking, Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             _GraficoBarrasCard(
               titulo: 'Coletas por coletor',
               subtitulo: 'Desempenho na semana atual',
@@ -602,6 +704,8 @@ class _DashboardConteudo extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _RankingColetoresCard(coletores: coletores),
+              ],
+            )),
             const SizedBox(height: 14),
             _IndicadorCard(
               icon: Icons.local_shipping_rounded,
@@ -672,7 +776,7 @@ class _DashboardConteudo extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            _AtividadesCard(),
+            frame(CicloGrafico.atividades, const _AtividadesCard()),
           ],
         );
     }

@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gru_app/core/utils/cep.dart';
 import 'package:gru_app/data/models/lixeira_model.dart';
 import 'package:gru_app/data/models/residuo_model.dart';
+import 'package:gru_app/data/models/ciclo_model.dart';
+import 'package:gru_app/data/services/ciclo_service.dart';
 import 'package:gru_app/data/services/mock_data_service.dart';
 
 void main() {
@@ -76,5 +78,27 @@ void main() {
 
     db.vincularColetor(ana.id, 'i1');
     expect(db.lixeirasDasInstituicoes(ana.instituicaoIds), isNotEmpty);
+  });
+
+  test('resposta do Ciclo converte os gráficos', () {
+    final r = CicloResposta.fromJson({
+      'resposta': ' Colete a Feira Livre. ',
+      'graficos': ['ocupacao', 'desconhecido', 'ranking'],
+      'modo': 'offline',
+    });
+    expect(r.resposta, 'Colete a Feira Livre.');
+    expect(r.graficos, [CicloGrafico.ocupacao, CicloGrafico.ranking]);
+    expect(r.modo, 'offline');
+  });
+
+  test('snapshot do Ciclo tem os dados dos gráficos', () {
+    final admin = MockDataService.instance.autenticar('admin@gru.com', 'gru123')!;
+    final s = CicloService.montarSnapshot(admin);
+    expect(s['instituicao'], 'Prefeitura Municipal');
+    expect((s['lixeiras'] as List), isNotEmpty);
+    expect((s['kpis'] as Map).keys,
+        containsAll(['lixeiras', 'ocupacaoMedia', 'paraColetar', 'coletas30d']));
+    final comp = (s['composicaoGeral'] as Map).values.cast<int>();
+    expect(comp.fold<int>(0, (a, b) => a + b), inInclusiveRange(98, 102));
   });
 }
