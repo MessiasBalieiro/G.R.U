@@ -38,7 +38,7 @@ function normalizar(texto) {
     .replace(/[\u0300-\u036f]/g, ""); // remove acentos
 }
 
-function tokenizar(texto) {
+export function tokenizar(texto) {
   return normalizar(texto)
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
@@ -58,8 +58,12 @@ function carregarDocumentos() {
     const secoes = conteudo.split(/\n(?=##\s)/g);
 
     for (const secao of secoes) {
-      const texto = secao.trim();
-      if (!texto || texto.startsWith("# ")) continue; // pula o título solto
+      let texto = secao.trim();
+      // O 1º pedaço começa com o título do documento ("# ..."): tira só a
+      // linha do título e mantém o texto que vem depois (documentos sem "##",
+      // como 04-ciclo.md, são inteiros esse 1º pedaço).
+      if (texto.startsWith("# ")) texto = texto.split("\n").slice(1).join("\n").trim();
+      if (!texto) continue;
       chunks.push({
         fonte: arquivo,
         titulo: tituloDoc,

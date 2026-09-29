@@ -1,4 +1,4 @@
-import { buscarConhecimento } from "./ciclo.rag.service.js";
+import { buscarConhecimento, tokenizar } from "./ciclo.rag.service.js";
 import {
   executarFerramenta,
   graficoDaFerramenta,
@@ -341,6 +341,20 @@ function montarRetorno(texto, ferramentas, trechos, modo) {
 // ═════════════════════════════════════════════════════════════════════════════
 // MODO OFFLINE (sem chave de API)
 // ═════════════════════════════════════════════════════════════════════════════
+/**
+ * O trecho mais parecido responde MESMO à pergunta? Exige 2 palavras
+ * importantes em comum (ou 1, se a pergunta só tiver uma). Ex.: "Quanto custa
+ * uma lixeira nova?" só divide "lixeira" com a base, então não serve.
+ */
+function trechoRelevante(pergunta, trechos) {
+  if (!trechos.length) return false;
+  const daPergunta = new Set(tokenizar(pergunta));
+  const doTrecho = new Set(tokenizar(trechos[0].texto));
+  const emComum = [...daPergunta].filter((t) => doTrecho.has(t)).length;
+  const exigido = Math.min(2, daPergunta.size);
+  return exigido > 0 && emComum >= exigido;
+}
+
 const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 function modoOffline(pergunta, snapshot, trechos) {
@@ -353,7 +367,12 @@ function modoOffline(pergunta, snapshot, trechos) {
     p.includes(norm(l.nome.replace(/^Lixeira\s+/i, ""))),
   );
 
-  if (tem("prev", "quando", "encher", "enche", "futuro", "semana", "amanha")) {
+  const conceitual = tem("o que e ", "o que sao", "o que significa", "como ler", "por que", "para que");
+
+  if (conceitual && trechoRelevante(pergunta, trechos)) {
+    ferramenta = "buscar_conhecimento";
+    texto = trechos[0].texto.split("\n").slice(1).join("\n").replace(/^##\s*/, "").trim();
+  } else if (tem("prev", "quando", "encher", "enche", "futuro", "semana", "amanha")) {
     ferramenta = "prever_enchimento";
     const r = executarFerramenta(ferramenta, lixeiraCitada ? { nome: lixeiraCitada.nome } : {}, snapshot);
     const lista = Array.isArray(r) ? r.filter((x) => x.diasParaEncher !== null).slice(0, 4) : [r];
@@ -416,11 +435,11 @@ function modoOffline(pergunta, snapshot, trechos) {
     texto = `${snapshot.instituicao}: ${k.lixeiras} lixeiras, ocupação média de ${k.ocupacaoMedia}%, ` +
       `${k.paraColetar ?? 0} para coletar${coletas}.` +
       (k.ocupacaoMedia >= 70 ? " A média está alta: a frequência de coleta parece abaixo da geração de lixo." : "");
-  } else if (trechos.length) {
+  } else if (trechoRelevante(pergunta, trechos)) {
     ferramenta = "buscar_conhecimento";
     texto = trechos[0].texto.split("\n").slice(1).join("\n").replace(/^##\s*/, "").trim();
   } else {
-    texto = "Posso ajudar com: resumo do dashboard, prioridade de coleta, previsão de enchimento, composição de material e desempenho dos coletores.";
+    texto = "Não tenho essa informação no Dashboard. Posso ajudar com: resumo do dashboard, prioridade de coleta, previsão de enchimento, composição de material, coletores e atividades.";
   }
 
   const r = montarRetorno(texto, ferramenta ? [ferramenta] : [], trechos, "offline");
