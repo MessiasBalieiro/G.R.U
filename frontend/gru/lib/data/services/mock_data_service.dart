@@ -50,6 +50,29 @@ class MockDataService {
     _lixeiras.add(lixeira);
   }
 
+  /// Leituras dos sensores (mock) usadas pelo Ciclo: data da última coleta
+  /// e composição de material (%) de cada lixeira, pelo `id`.
+  /// Ainda não existem no backend; quando existirem, virão da API junto com
+  /// a lixeira e este mapa pode ser removido.
+  static Map<String, ({DateTime ultimaColeta, Map<String, int> composicao})>
+      get sensores {
+    final agora = DateTime.now();
+    return {
+      '1': (
+        ultimaColeta: agora.subtract(const Duration(days: 2)),
+        composicao: {'Plástico': 45, 'Papel': 30, 'Vidro': 15, 'Metal': 10},
+      ),
+      '2': (
+        ultimaColeta: agora.subtract(const Duration(days: 3)),
+        composicao: {'Vidro': 50, 'Metal': 25, 'Plástico': 15, 'Papel': 10},
+      ),
+      '3': (
+        ultimaColeta: agora.subtract(const Duration(days: 1)),
+        composicao: {'Plástico': 60, 'Papel': 20, 'Metal': 12, 'Vidro': 8},
+      ),
+    };
+  }
+
   static const List<ColetorModel> coletores = [
     ColetorModel(nome: 'João Silva', coletasRealizadas: 14),
     ColetorModel(nome: 'Maria Souza', coletasRealizadas: 9),
