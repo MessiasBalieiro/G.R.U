@@ -33,7 +33,7 @@ jobs:
         working-directory: ./frontend/gru
 
       - name: Build Web
-        run: flutter build web --base-href "/G.R.U/" --release
+        run: flutter build web --base-href "/G.R.U/" --release--dart-define=GRU_API_URL=https://g-r-u.onrender.com
         working-directory: ./frontend/gru
 
       - name: Configurar Pages
