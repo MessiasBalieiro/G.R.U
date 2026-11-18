@@ -184,6 +184,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           accentColor: AppColors.green,
                         ),
                         const SizedBox(height: 16),
+                        if (providerWatchUsuario.erroCarga != null) ...[
+                          const _AvisoErroCarga(),
+                          const SizedBox(height: 12),
+                        ],
                         _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras, coletores: coletores)),
                         const SizedBox(height: 16),
                         sidebar,
@@ -209,6 +213,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       accentColor: AppColors.green,
                     ),
                     const SizedBox(height: 16),
+                    if (providerWatchUsuario.erroCarga != null) ...[
+                      const _AvisoErroCarga(),
+                      const SizedBox(height: 12),
+                    ],
                     // Faixa de KPIs sempre visível
                     _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras, coletores: coletores)),
                     const SizedBox(height: 16),
@@ -1369,8 +1377,6 @@ class _AtividadesCard extends StatelessWidget {
   //   (icon: Icons.recycling_rounded, cor: AppColors.green, texto: 'Coleta do Terminal concluída', tempo: 'Há 1d'),
   // ];
 
-  static final _atividades = [];
-
   String calcularDiferenca(String dataInformada) {
     final partes = dataInformada.split(', ');
     final data = partes[0].split('/');
@@ -1393,12 +1399,15 @@ class _AtividadesCard extends StatelessWidget {
     if (horas < 24) {
       return 'Há ${horas}h';
     } else {
-      return 'Há {$dias}d';
+      return 'Há ${dias}d';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Lista local: é refeita a cada build (antes era estática e acumulava
+    // itens repetidos a cada redesenho da tela).
+    final _atividades = [];
 
     if(history.isNotEmpty) {
       for(int i = 0; i < history.length; i++) {
@@ -1548,6 +1557,51 @@ class _IndicadorCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(3),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AVISO: não foi possível carregar os dados do servidor
+// ═══════════════════════════════════════════════════════════════════════════
+class _AvisoErroCarga extends StatelessWidget {
+  const _AvisoErroCarga();
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.orange.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.orange.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: AppColors.orange),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              auth.erroCarga ?? '',
+              style: const TextStyle(fontSize: 13, color: AppColors.dark),
+            ),
+          ),
+          if (auth.carregandoConta)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.orange),
+            )
+          else
+            TextButton(
+              onPressed: () => context.read<AuthProvider>().carregarConta(),
+              child: const Text('Tentar de novo'),
+            ),
         ],
       ),
     );

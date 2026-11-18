@@ -11,7 +11,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LixeiraProvider()),
-        ChangeNotifierProvider(create: (context) => AuthProvider(context.read<LixeiraProvider>())),
+        ChangeNotifierProvider(create: (context) => AuthProvider(context.read<LixeiraProvider>())..restaurarSessao()),
       ],
       child: const GruApp()
     )

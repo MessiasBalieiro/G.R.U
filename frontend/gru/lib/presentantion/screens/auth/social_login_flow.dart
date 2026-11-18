@@ -5,11 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/usuario_model.dart';
-import '../../../data/repositories/lixeira_repository.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../data/services/social_auth_service.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../providers/lixeira_provider.dart';
 import '../../../routes/app_routes.dart';
 
 /// Fluxo compartilhado pelas telas de Login e Cadastro:
@@ -70,10 +68,7 @@ class SocialLoginFlow {
   /// Área de Trabalho. [usuario] é o JSON devolvido pelo backend.
   static Future<void> concluirLogin(BuildContext context, dynamic usuario) async {
     final auth = context.read<AuthProvider>();
-    final lixeiras = context.read<LixeiraProvider>();
     final navigator = Navigator.of(context);
-    final repo = UsuarioRepository();
-    final repoLixeira = LixeiraRepository();
 
     auth.definirUsuario(UsuarioModel(
       id: usuario['_id'],
@@ -85,21 +80,7 @@ class SocialLoginFlow {
       instituicao: usuario['instituicao_usuario'],
       coletasRealizadas: usuario['coletas_realizadas'],
     ));
-    auth.definirOrganizacao(
-        await repo.buscarOrganizacao(idContratante: usuario['_id']));
-
-    final org = auth.organizacao;
-    if (org != null) {
-      final coletores = org['colectors'] as List?;
-      if (coletores != null && coletores.isNotEmpty) {
-        auth.definirColetores(await repo.buscarColetores(ids: coletores));
-      }
-      final trashes = org['trashes'] as List?;
-      if (trashes != null && trashes.isNotEmpty) {
-        lixeiras.definirLixeiras(
-            await repoLixeira.listar(codigoDonoLixeira: usuario['_id']));
-      }
-    }
+    await auth.carregarConta();
 
     navigator.pushNamedAndRemoveUntil(AppRoutes.areaTrabalho, (_) => false);
   }

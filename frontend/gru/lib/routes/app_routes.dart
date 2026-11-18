@@ -8,6 +8,7 @@ import '../presentantion/screens/workspace/cadastro_coletor_screen.dart';
 import '../presentantion/screens/workspace/cadastro_lixeira_screen.dart';
 import '../presentantion/screens/workspace/gerar_relatorio_screen.dart';
 import '../presentantion/screens/workspace/dashboard_screen.dart';
+import '../presentantion/widgets/rota_protegida.dart';
 
 /// Nomes de rota + tabela de rotas do app, na mesma ordem das telas do
 /// design: Home, Login, Cadastro, App, Área de Trabalho, Cadastro Lixeira,
@@ -30,10 +31,10 @@ class AppRoutes {
         login: (_) => const LoginScreen(),
         cadastro: (_) => const CadastroScreen(),
         appDownload: (_) => const AppDownloadScreen(),
-        areaTrabalho: (_) => const AreaTrabalhoScreen(),
-        cadastroLixeira: (_) => const CadastroLixeiraScreen(),
-        cadastroColetor: (_) => const CadastroColetorScreen(),
-        gerarRelatorio: (_) => const GerarRelatorioScreen(),
-        dashboard: (_) => const DashboardScreen(),
+        areaTrabalho: (_) => const RotaProtegida(child: AreaTrabalhoScreen()),
+        cadastroLixeira: (_) => const RotaProtegida(child: CadastroLixeiraScreen()),
+        cadastroColetor: (_) => const RotaProtegida(child: CadastroColetorScreen()),
+        gerarRelatorio: (_) => const RotaProtegida(child: GerarRelatorioScreen()),
+        dashboard: (_) => const RotaProtegida(child: DashboardScreen()),
       };
 }
