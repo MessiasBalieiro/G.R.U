@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Campo de texto com rótulo acima, no estilo usado nas telas de
 /// Login e Cadastro (label branco + input em pílula branca).
@@ -11,6 +12,7 @@ class LabeledTextField extends StatelessWidget {
     this.labelColor = Colors.white,
     this.keyboardType,
     this.validator,
+    this.inputFormatters,
   });
 
   final String label;
@@ -19,6 +21,7 @@ class LabeledTextField extends StatelessWidget {
   final Color labelColor;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +42,7 @@ class LabeledTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           validator: validator,
+          inputFormatters: inputFormatters,
         ),
       ],
     );

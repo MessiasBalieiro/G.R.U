@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/usuario_model.dart';
 import '../data/repositories/lixeira_repository.dart';
 import '../data/repositories/usuario_repository.dart';
+import '../data/services/demo_data.dart';
 
 class AuthProvider extends ChangeNotifier {
   UsuarioModel? _usuario;
@@ -21,16 +22,34 @@ class AuthProvider extends ChangeNotifier {
 
   bool _restaurando = true;
   bool _carregandoConta = false;
+  bool _modoDemo = false;
   String? _erroCarga;
 
   /// `true` enquanto o site confere se havia um login salvo (ao abrir/recarregar).
   bool get restaurando => _restaurando;
   bool get carregandoConta => _carregandoConta;
 
+  /// `true` no modo demonstração (dados de exemplo, sem servidor).
+  bool get modoDemo => _modoDemo;
+
+  /// Entra com dados de exemplo, sem precisar de conta nem do servidor.
+  void entrarModoDemo() {
+    _modoDemo = true;
+    _erroCarga = null;
+    _usuario = UsuarioModel.fromJson(DemoData.usuario());
+    _coletores.clear();
+    _adicionarColetores(DemoData.coletores());
+    _lixeiraProvider?.definirLixeiras(DemoData.lixeiras());
+    _organizacao = DemoData.organizacao();
+    _restaurando = false;
+    notifyListeners();
+  }
+
   /// Mensagem quando os dados da conta não puderam ser carregados do servidor.
   String? get erroCarga => _erroCarga;
 
   void definirUsuario(UsuarioModel usuario) {
+    _modoDemo = false;
     _usuario = usuario;
     _salvarSessao(usuario);
     notifyListeners();
@@ -72,43 +91,69 @@ class AuthProvider extends ChangeNotifier {
 
   /// Busca no servidor a organização, os coletores e as lixeiras do usuário.
   /// Se o servidor falhar, deixa dados vazios e preenche [erroCarga].
-  Future<void> carregarConta() async {
+  ///
+  /// Com [silencioso] (atualização automática) não mostra carregamento e, se
+  /// falhar, mantém os dados que já estavam na tela.
+  Future<void> carregarConta({bool silencioso = false}) async {
     final usuario = _usuario;
-    if (usuario == null) return;
+    if (usuario == null || _modoDemo) return;
 
-    _carregandoConta = true;
-    _erroCarga = null;
-    notifyListeners();
+    if (!silencioso) {
+      _carregandoConta = true;
+      _erroCarga = null;
+      notifyListeners();
+    }
 
     final repo = UsuarioRepository();
     final repoLixeira = LixeiraRepository();
     Map<String, dynamic> org = {};
+    var falhou = false;
+    List<dynamic>? coletoresNovos;
+    dynamic lixeirasNovas;
 
     try {
       final resposta = await repo.buscarOrganizacao(idContratante: usuario.id);
       if (resposta is Map) org = Map<String, dynamic>.from(resposta);
 
-      _coletores.clear();
       final coletores = org['colectors'];
       if (coletores is List && coletores.isNotEmpty) {
-        _adicionarColetores(await repo.buscarColetores(ids: coletores));
+        coletoresNovos = await repo.buscarColetores(ids: coletores);
       }
 
       final trashes = org['trashes'];
       if (trashes is List && trashes.isNotEmpty) {
-        _lixeiraProvider?.definirLixeiras(
-            await repoLixeira.listar(codigoDonoLixeira: usuario.id));
+        lixeirasNovas =
+            await repoLixeira.listar(codigoDonoLixeira: usuario.id);
+      } else {
+        lixeirasNovas = [];
       }
     } catch (_) {
-      _erroCarga = 'Não foi possível carregar os dados do servidor.';
-    } finally {
+      falhou = true;
+    }
+
+    // Se o usuário saiu da conta (ou entrou na demo) durante a espera, descarta.
+    if (_usuario?.id != usuario.id || _modoDemo) {
+      _carregandoConta = false;
+      return;
+    }
+
+    if (falhou) {
+      if (!silencioso) {
+        _erroCarga = 'Não foi possível carregar os dados do servidor.';
+        _organizacao ??= {'colectors': [], 'trashes': [], 'history': []};
+      }
+    } else {
+      _erroCarga = null;
+      _coletores.clear();
+      if (coletoresNovos != null) _adicionarColetores(coletoresNovos);
+      if (lixeirasNovas != null) _lixeiraProvider?.definirLixeiras(lixeirasNovas);
       org.putIfAbsent('colectors', () => []);
       org.putIfAbsent('trashes', () => []);
       org.putIfAbsent('history', () => []);
       _organizacao = org;
-      _carregandoConta = false;
-      notifyListeners();
     }
+    _carregandoConta = false;
+    notifyListeners();
   }
 
   void definirContratante(UsuarioModel contratante) {
@@ -153,6 +198,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void logout() {
+    _modoDemo = false;
     _limparSessao();
     _erroCarga = null;
     _usuario = null;

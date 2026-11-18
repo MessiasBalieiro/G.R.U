@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/repositories/usuario_repository.dart';
+import '../../widgets/aviso_modo_demo.dart';
 import '../../widgets/workspace_header.dart';
 
 class CadastroColetorScreen extends StatefulWidget  {
@@ -137,6 +138,7 @@ class _CadastroColetorScreenState extends State<CadastroColetorScreen> with Tick
   }
 
   Future<void> _adicionarColetor(AuthProvider providerWatchUsuario, AuthProvider providerReadUsuario) async {
+    if (bloquearNaDemo(context)) return;
     if (_cpfController.text.trim().isEmpty || _nomeController.text.trim().isEmpty || _emailController.text.trim().isEmpty || _telefoneController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -185,6 +187,7 @@ class _CadastroColetorScreenState extends State<CadastroColetorScreen> with Tick
   }
 
   Future<void> _pesquisarColetor() async {
+    if (bloquearNaDemo(context)) return;
     if (_cpfController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -209,6 +212,7 @@ class _CadastroColetorScreenState extends State<CadastroColetorScreen> with Tick
   }
 
   Future<void> _excluirColetor(UsuarioModel coletor, AuthProvider providerWatchUsuario, AuthProvider providerReadUsuario) async {
+    if (bloquearNaDemo(context)) return;
     try {
       final resposta = await _usuarioRepository.removerColetorDaOrganizacao(
         cltCpf: coletor.cpfUsuario,

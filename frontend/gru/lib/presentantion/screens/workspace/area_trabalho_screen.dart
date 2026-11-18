@@ -3,6 +3,7 @@ import '../../../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../data/models/usuario_model.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/animated_svg_wave.dart';
 import '../../widgets/gru_mascot.dart';
@@ -17,9 +18,18 @@ class AreaTrabalhoScreen extends StatefulWidget {
 
 
 class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
+  void _sair() {
+    context.read<AuthProvider>().logout();
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
-  final cargoUsuario = context.watch<AuthProvider>().usuario?.cargoUsuario;
+  final auth = context.watch<AuthProvider>();
+  final cargoUsuario = auth.usuario?.cargoUsuario;
+  final usuario = auth.usuario;
+  final demo = auth.modoDemo;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -48,15 +58,11 @@ class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
                     Row(
                       children: [
                         IconButton(
-                          onPressed: () => {
-                              context.read<AuthProvider>().logout(),
-                              Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false)
-                            },
+                          onPressed: _sair,
                           icon: Icon(Icons.arrow_back_rounded,
                               color: AppColors.dark),
-                          tooltip: 'Voltar para o Login',
+                          tooltip: 'Sair e voltar para o Login',
                         ),
-
                         SizedBox(width: 4),
                         Container(
                           padding: EdgeInsets.all(8),
@@ -66,19 +72,33 @@ class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
                           ),
                           child: GruMascot(size: 32),
                         ),
-                        Spacer(),
-                        Text(
-                          'Área de Trabalho',
-                          style: TextStyle(
-                            color: AppColors.green,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
+                        SizedBox(width: 12),
+                        Expanded(child: _BarraUsuario(usuario: usuario, demo: demo)),
+                        SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _sair,
+                          icon: Icon(Icons.logout_rounded, size: 18),
+                          label: Text('Sair'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.dark,
+                            side: BorderSide(color: AppColors.dark.withValues(alpha: 0.4)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
                           ),
                         ),
                       ],
                     ),
 
-                    SizedBox(height: 36),
+                    SizedBox(height: 24),
+                    Text(
+                      'Área de Trabalho',
+                      style: TextStyle(
+                        color: AppColors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                      ),
+                    ),
+                    SizedBox(height: 20),
 
                     LayoutBuilder(builder: (context, constraints) {
                       final isMobile = constraints.maxWidth < 560;
@@ -147,6 +167,55 @@ class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "Olá, Nome" + instituição (e selo de demonstração) no topo.
+class _BarraUsuario extends StatelessWidget {
+  const _BarraUsuario({required this.usuario, required this.demo});
+
+  final UsuarioModel? usuario;
+  final bool demo;
+
+  @override
+  Widget build(BuildContext context) {
+    final nome = (usuario?.nomeUsuario ?? '').trim();
+    final primeiro = nome.isEmpty ? '' : nome.split(' ').first;
+    final inst = (usuario?.instituicao ?? '').trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          primeiro.isEmpty ? 'Olá!' : 'Olá, $primeiro',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              color: AppColors.dark, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        if (inst.isNotEmpty)
+          Text(
+            inst,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+        if (demo)
+          Container(
+            margin: EdgeInsets.only(top: 4),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.green.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text('Modo demonstração',
+                style: TextStyle(
+                    color: AppColors.green,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold)),
+          ),
+      ],
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/models/relatorio_model.dart';
+import '../../../data/services/demo_data.dart';
 import '../../../data/services/mock_data_service.dart';
 import '../../../data/services/relatorio_pdf.dart';
 import '../../../data/services/relatorio_service.dart';
@@ -54,7 +55,9 @@ class _GerarRelatorioScreenState extends State<GerarRelatorioScreen> {
       final RelatorioDados dados;
       switch (opcao.id) {
         case 'tipos_residuo':
-          final residuos = await RelatorioService.buscarResiduos();
+          final residuos = auth.modoDemo
+              ? DemoData.residuos()
+              : await RelatorioService.buscarResiduos();
           dados = RelatorioService.tiposResiduo(
               instituicao: instituicao, lixeiras: lixeiras, residuos: residuos);
         case 'ocupacao':
