@@ -32,6 +32,9 @@ class AuthProvider extends ChangeNotifier {
   /// `true` quando o servidor falhou e a tela mostra dados de exemplo.
   bool get usandoDadosExemplo => _dadosExemplo;
 
+  /// Mensagem de erro de carga (hoje o servidor com falha usa dados de exemplo).
+  String? get erroCarga => _erroCarga;
+
   void _carregarExemplo() {
     _dadosExemplo = true;
     _coletores.clear();
