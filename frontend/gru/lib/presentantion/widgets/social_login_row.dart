@@ -9,7 +9,17 @@ import 'hover_lift.dart';
 /// [onSelecionar] é chamado ao tocar num provedor. Enquanto ele roda, os
 /// botões ficam desativados e o escolhido mostra um indicador de carregamento.
 class SocialLoginRow extends StatefulWidget {
-  const SocialLoginRow({super.key, this.onSelecionar, this.iconSize = 26});
+  const SocialLoginRow({
+    super.key,
+    this.onSelecionar,
+    this.iconSize = 26,
+    this.provedores = const [ProvedorSocial.google],
+  });
+
+  /// Provedores exibidos. Por enquanto só o Google está configurado; para
+  /// mostrar os outros, passe `ProvedorSocial.values` (depois de ativá-los
+  /// no Firebase).
+  final List<ProvedorSocial> provedores;
 
   final Future<void> Function(ProvedorSocial provedor)? onSelecionar;
 
@@ -70,16 +80,27 @@ class _SocialLoginRowState extends State<SocialLoginRow> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          icone(ProvedorSocial.google, AppImages.googleLogo, 'Entrar com Google'),
-          SizedBox(width: gap),
-          icone(ProvedorSocial.apple, AppImages.appleLogo, 'Entrar com Apple'),
-          SizedBox(width: gap),
-          icone(ProvedorSocial.microsoft, AppImages.microsoftLogo,
-              'Entrar com Microsoft'),
+          for (var i = 0; i < widget.provedores.length; i++) ...[
+            if (i > 0) SizedBox(width: gap),
+            icone(widget.provedores[i], _asset(widget.provedores[i]),
+                _dica(widget.provedores[i])),
+          ],
         ],
       ),
     );
   }
+
+  String _asset(ProvedorSocial p) => switch (p) {
+        ProvedorSocial.google => AppImages.googleLogo,
+        ProvedorSocial.apple => AppImages.appleLogo,
+        ProvedorSocial.microsoft => AppImages.microsoftLogo,
+      };
+
+  String _dica(ProvedorSocial p) => switch (p) {
+        ProvedorSocial.google => 'Entrar com Google',
+        ProvedorSocial.apple => 'Entrar com Apple',
+        ProvedorSocial.microsoft => 'Entrar com Microsoft',
+      };
 }
 
 class _SocialIcon extends StatelessWidget {

@@ -7,6 +7,7 @@ class LixeiraProvider extends ChangeNotifier {
   List<LixeiraModel> get lixeiras => _lixeiras;
 
   void definirLixeiras(dynamic lixeiras) {
+    _lixeiras.clear();
     lixeiras.forEach((lixeira) {
       _lixeiras.add(LixeiraModel(id: lixeira['_id'], nomeLixeira: lixeira['nome_lixeira'], codigoDonoLixeira: lixeira['codigo_dono_lixeira'], enderecoLixeira: lixeira['endereco_lixeira'], coordenada: lixeira['coordenada'], quantidadeResiduo: lixeira['quantidade_residuo'] ?? 0, statusLixeira: StatusLixeira.fromCodigo(lixeira['status_lixeira'])));
     });
