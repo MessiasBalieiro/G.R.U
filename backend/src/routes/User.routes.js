@@ -11,6 +11,8 @@ router.post("/this-colectors", userController.getThisColectos);
 
 router.post("/login", userController.login);
 
+router.post("/social-login", userController.socialLogin);
+
 router.post("/create-user", userController.createUser);
 
 export default router;

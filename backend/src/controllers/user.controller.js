@@ -39,6 +39,20 @@ class UserController {
         }
     }
 
+    static async socialLogin(req, res) {
+        try {
+            const usuario = await userService.socialLogin(req.body.id_token);
+            if (!usuario) {
+                return res.status(404).json({ mensagem: 'Usuário não cadastrado' });
+            }
+            res.status(200).json(usuario);
+        } catch (error) {
+            console.error(error);
+            const tokenInvalido = error.status === 401 || String(error.code || '').startsWith('ERR_J');
+            res.status(tokenInvalido ? 401 : 500).send('Erro ao realizar login social');
+        }
+    }
+
     static async createUser(req, res) {
         try {
             res.status(201).json(await userService.createUser(req.body));

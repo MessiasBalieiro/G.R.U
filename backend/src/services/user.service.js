@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 import userModel from '../Models/user.model.js';
 import OrganizationService from './organization.service.js';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+
+// Chaves públicas que o Firebase usa para assinar os tokens de login.
+const FIREBASE_JWKS = createRemoteJWKSet(
+    new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+);
 
 class UserService {
     // REQUISITADOS
@@ -43,6 +49,35 @@ class UserService {
         } catch (error) {
             throw new Error(error.message)
         }
+    }
+
+    // Login social (Google / Microsoft / Apple via Firebase).
+    // Valida o token enviado pelo site e devolve o usuário com esse e-mail
+    // (ou null se ainda não existe cadastro).
+    static async socialLogin(idToken) {
+        const projectId = process.env.FIREBASE_PROJECT_ID;
+        if (!projectId) {
+            throw new Error('FIREBASE_PROJECT_ID não configurado no servidor');
+        }
+        if (typeof idToken !== 'string' || idToken.length === 0) {
+            const err = new Error('Token ausente');
+            err.status = 401;
+            throw err;
+        }
+
+        const { payload } = await jwtVerify(idToken, FIREBASE_JWKS, {
+            issuer: `https://securetoken.google.com/${projectId}`,
+            audience: projectId,
+        });
+
+        if (!payload.email || payload.email_verified !== true) {
+            const err = new Error('E-mail da conta social não verificado');
+            err.status = 401;
+            throw err;
+        }
+
+        const emailSeguro = String(payload.email).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return await userModel.findOne({ email_usuario: new RegExp(`^${emailSeguro}$`, 'i') });
     }
 
     static async createUser(userData) {

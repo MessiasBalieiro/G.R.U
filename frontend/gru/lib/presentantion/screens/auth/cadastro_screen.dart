@@ -6,7 +6,11 @@ import '../../../routes/app_routes.dart';
 import '../../widgets/animated_svg_wave.dart';
 import '../../widgets/gru_mascot.dart';
 import '../../widgets/labeled_text_field.dart';
+import '../../widgets/hover_lift.dart';
 import '../../widgets/social_login_row.dart';
+import '../../widgets/wave_transition.dart';
+import 'login_screen.dart';
+import 'social_login_flow.dart';
 
 // Guia de modificação das ondas → veja login_screen.dart (mesmo guia)
 
@@ -52,7 +56,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cadastro realizado! Faça login.')),
       );
-      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+      WaveTransition.replace(context, const LoginScreen(), vindoDaDireita: false, corDaOnda: AppColors.green, nomeDaRota: AppRoutes.login);
     }
   }
 
@@ -116,8 +120,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 IconButton(
-                  onPressed: () => Navigator.of(context)
-                      .pushReplacementNamed(AppRoutes.login),
+                  onPressed: () => WaveTransition.replace(context, const LoginScreen(), vindoDaDireita: false, corDaOnda: AppColors.green, nomeDaRota: AppRoutes.login),
                   icon: const Icon(Icons.arrow_back_rounded,
                       color: Colors.white),
                 ),
@@ -250,7 +253,7 @@ class _DesktopCadastro extends StatelessWidget {
                             controller: instCtrl,
                             validator: (v) => req(v, 'sua instituição')),
                         const SizedBox(height: 16),
-                        const SocialLoginRow(),
+                        SocialLoginRow(onSelecionar: (p) => SocialLoginFlow.iniciar(context, p)),
                       ],
                     ),
                   ),
@@ -258,7 +261,7 @@ class _DesktopCadastro extends StatelessWidget {
                 const SizedBox(height: 14),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: FilledButton(
+                  child: HoverLift(glowColor: AppColors.green, child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.green,
                       padding: const EdgeInsets.symmetric(
@@ -274,7 +277,7 @@ class _DesktopCadastro extends StatelessWidget {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
                         : const Text('Cadastrar'),
-                  ),
+                  )),
                 ),
               ],
             ),
@@ -306,7 +309,7 @@ class _DesktopCadastro extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(height: 20),
-                  OutlinedButton(
+                  HoverLift(glowColor: Colors.white, child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white, width: 1.5),
@@ -315,10 +318,9 @@ class _DesktopCadastro extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24)),
                     ),
-                    onPressed: () => Navigator.of(context)
-                        .pushReplacementNamed(AppRoutes.login),
+                    onPressed: () => WaveTransition.replace(context, const LoginScreen(), vindoDaDireita: false, corDaOnda: AppColors.green, nomeDaRota: AppRoutes.login),
                     child: const Text('Login'),
-                  ),
+                  )),
                 ],
               ),
             ),
@@ -399,19 +401,19 @@ class _MobileCadastro extends StatelessWidget {
                       controller: instCtrl,
                       validator: (v) => req(v, 'sua instituição')),
                   const SizedBox(height: 14),
-                  const SocialLoginRow(),
+                  SocialLoginRow(onSelecionar: (p) => SocialLoginFlow.iniciar(context, p)),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton(
+              child: HoverLift(glowColor: AppColors.green, child: FilledButton(
                 style: FilledButton.styleFrom(
                     backgroundColor: AppColors.green),
                 onPressed: carregando ? null : onSubmit,
                 child: const Text('Cadastrar'),
-              ),
+              )),
             ),
           ],
         ),

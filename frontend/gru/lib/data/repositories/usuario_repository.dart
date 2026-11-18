@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../core/config/api_config.dart';
 
 /// Repositório de autenticação/cadastro de usuário.
 ///
@@ -35,6 +36,26 @@ class UsuarioRepository {
     else {
       throw Exception('Falha ao autenticar usuário');
     }
+  }
+
+  /// Login com conta social. Manda o token do Firebase para o backend, que o
+  /// valida e devolve o usuário. Retorna `null` se ainda não existe cadastro
+  /// com esse e-mail.
+  Future<dynamic> loginSocial({required String idToken}) async {
+    final resposta = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/users/social-login'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: jsonEncode({'id_token': idToken}),
+    );
+
+    if (resposta.statusCode == 200 && resposta.body.isNotEmpty) {
+      return jsonDecode(resposta.body);
+    }
+    if (resposta.statusCode == 404) return null;
+    throw Exception('Falha ao entrar com conta social');
   }
 
   Future<dynamic> cadastrar({required String nome, required String email, required String telefone, required String cpf, required String senha, required String instituicao}) async {

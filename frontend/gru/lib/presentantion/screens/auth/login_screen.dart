@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/repositories/lixeira_repository.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/animated_svg_wave.dart';
 import '../../widgets/gru_mascot.dart';
 import '../../widgets/labeled_text_field.dart';
+import '../../widgets/hover_lift.dart';
 import '../../widgets/social_login_row.dart';
-import '../../../data/models/usuario_model.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../providers/lixeira_provider.dart';
+import '../../widgets/wave_transition.dart';
+import 'cadastro_screen.dart';
+import 'social_login_flow.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GUIA RÁPIDO: COMO MODIFICAR AS ONDAS SVG
@@ -46,7 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
   final _repository = UsuarioRepository();
-  final _repositoryLixeira = LixeiraRepository();
   bool _carregando = false;
 
   @override
@@ -66,22 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _carregando = false);
     if (ok != null) {
-      context.read<AuthProvider>().definirUsuario( UsuarioModel(id: ok['_id'], nomeUsuario: ok['nome_usuario'], emailUsuario: ok['email_usuario'], telefoneUsuario: ok['telefone_usuario'], cpfUsuario: ok['cpf_usuario'], cargoUsuario: ok['cargo_usuario'], instituicao: ok['instituicao_usuario'], coletasRealizadas: ok['coletas_realizadas']) );
-      context.read<AuthProvider>().definirOrganizacao(await _repository.buscarOrganizacao(idContratante: ok['_id']));
-      
-      if(context.read<AuthProvider>().organizacao != null) {
-        if(context.read<AuthProvider>().organizacao['colectors'].length > 0) {
-          print("Aqui foi");
-          context.read<AuthProvider>().definirColetores(await _repository.buscarColetores(ids: context.read<AuthProvider>().organizacao['colectors']));
-        }
-
-        if(context.read<AuthProvider>().organizacao['trashes'].length > 0) {
-          print("Aqui também");
-          context.read<LixeiraProvider>().definirLixeiras(await _repositoryLixeira.listar(codigoDonoLixeira: ok['_id']));
-        }
-      }
-
-      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.areaTrabalho, (_) => false);
+      await SocialLoginFlow.concluirLogin(context, ok);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preencha email e senha.')),
@@ -267,7 +250,7 @@ class _DesktopLayout extends StatelessWidget {
                               : null,
                         ),
                         const SizedBox(height: 18),
-                        const SocialLoginRow(),
+                        SocialLoginRow(onSelecionar: (p) => SocialLoginFlow.iniciar(context, p)),
                       ],
                     ),
                   ),
@@ -276,7 +259,7 @@ class _DesktopLayout extends StatelessWidget {
                 const SizedBox(height: 14),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: FilledButton(
+                  child: HoverLift(glowColor: AppColors.dark, child: FilledButton(
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.dark,
                       padding: const EdgeInsets.symmetric(
@@ -293,7 +276,7 @@ class _DesktopLayout extends StatelessWidget {
                                 strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('Entrar'),
-                  ),
+                  )),
                 ),
               ],
             ),
@@ -326,11 +309,10 @@ class _DesktopLayout extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context)
-                        .pushReplacementNamed(AppRoutes.cadastro),
+                  HoverLift(glowColor: AppColors.orange, child: ElevatedButton(
+                    onPressed: () => WaveTransition.replace(context, const CadastroScreen(), vindoDaDireita: true, corDaOnda: AppColors.dark, nomeDaRota: AppRoutes.cadastro),
                     child: const Text('Cadastre-se'),
-                  ),
+                  )),
                 ],
               ),
             ),
@@ -404,19 +386,19 @@ class _MobileLayout extends StatelessWidget {
                         : null,
                   ),
                   const SizedBox(height: 16),
-                  const SocialLoginRow(),
+                  SocialLoginRow(onSelecionar: (p) => SocialLoginFlow.iniciar(context, p)),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerRight,
-              child: FilledButton(
+              child: HoverLift(glowColor: AppColors.dark, child: FilledButton(
                 style: FilledButton.styleFrom(
                     backgroundColor: AppColors.dark),
                 onPressed: carregando ? null : onSubmit,
                 child: const Text('Entrar'),
-              ),
+              )),
             ),
             const SizedBox(height: 40),
             Column(
@@ -435,11 +417,10 @@ class _MobileLayout extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context)
-                      .pushReplacementNamed(AppRoutes.cadastro),
+                HoverLift(glowColor: AppColors.orange, child: ElevatedButton(
+                  onPressed: () => WaveTransition.replace(context, const CadastroScreen(), vindoDaDireita: true, corDaOnda: AppColors.dark, nomeDaRota: AppRoutes.cadastro),
                   child: const Text('Cadastre-se'),
-                ),
+                )),
               ],
             ),
           ],
