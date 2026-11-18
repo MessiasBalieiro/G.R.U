@@ -8,7 +8,11 @@ class ContatoService {
   const ContatoService();
 
   /// Retorna `true` se o envio foi aceito.
-  Future<bool> enviar({required String mensagem, String? emailRetorno}) async {
+  Future<bool> enviar({
+    required String mensagem,
+    String? emailRetorno,
+    String assunto = 'Nova pergunta pelo site G.R.U',
+  }) async {
     try {
       final resposta = await http
           .post(
@@ -22,7 +26,7 @@ class ContatoService {
               if (emailRetorno != null && emailRetorno.isNotEmpty)
                 'email': emailRetorno,
               'message': mensagem,
-              '_subject': 'Nova pergunta pelo site G.R.U',
+              '_subject': assunto,
             }),
           )
           .timeout(const Duration(seconds: 20));

@@ -13,7 +13,7 @@ class CicloController extends ChangeNotifier {
   }) : _service = service ?? CicloService();
 
   /// Função que monta o snapshot com os dados atuais do Dashboard.
-  final Map<String, dynamic> snapshot;
+  Map<String, dynamic> snapshot;
   final CicloService _service;
 
   final List<CicloMensagem> _mensagens = [

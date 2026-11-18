@@ -58,6 +58,8 @@ class UsuarioRepository {
     throw Exception('Falha ao entrar com conta social');
   }
 
+  /// Cria a conta e a organização. Devolve o usuário criado ou `null` se o
+  /// servidor recusou (dados inválidos, CPF/e-mail repetidos, etc.).
   Future<dynamic> cadastrar({required String nome, required String email, required String telefone, required String cpf, required String senha, required String instituicao}) async {
     final url = Uri.parse('https://backend-gru.vercel.app/users/create-user');
 
@@ -78,35 +80,43 @@ class UsuarioRepository {
       })
     );
 
-    final dados = jsonDecode(resposta.body);
-
-    if ((resposta.statusCode == 201 || resposta.statusCode == 200) && resposta.body.isNotEmpty) {
-      final urlOrg = Uri.parse('https://backend-gru.vercel.app/organizations/create-org?rl=CONTRATANTE');
-
-      final respostaOrg = await http.post(
-        urlOrg,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: jsonEncode({
-          'id_contratante': dados['_id'],
-          'trashes': [],
-          'colectors': [],
-          'organization_name': instituicao,
-          'history': []
-        })
-      );
-
-      if ((respostaOrg.statusCode == 201 || respostaOrg.statusCode == 200) && respostaOrg.body.isNotEmpty) {
-        return dados;
-      }
-      else {
-        return null;
-      }
-    } else {
+    // O servidor responde texto simples em caso de erro (não é JSON).
+    if (!(resposta.statusCode == 201 || resposta.statusCode == 200) || resposta.body.isEmpty) {
       return null;
     }
+
+    final dados = jsonDecode(resposta.body);
+
+    final urlOrg = Uri.parse('https://backend-gru.vercel.app/organizations/create-org?rl=CONTRATANTE');
+
+    final respostaOrg = await http.post(
+      urlOrg,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: jsonEncode({
+        'id_contratante': dados['_id'],
+        'trashes': [],
+        'colectors': [],
+        'organization_name': instituicao,
+        'history': []
+      })
+    );
+
+    if ((respostaOrg.statusCode == 201 || respostaOrg.statusCode == 200) && respostaOrg.body.isNotEmpty) {
+      return dados;
+    }
+    return null;
+  }
+
+  /// `true` se já existe usuário (contratante ou coletor) com esse CPF.
+  Future<bool> cpfJaCadastrado(String cpf) async {
+    for (final cargo in const ['CONTRATANTE', 'COLETOR']) {
+      final dados = await buscarUsuario(cpf: cpf, cargo: cargo);
+      if (dados is Map && dados['_id'] != null) return true;
+    }
+    return false;
   }
 
   Future<dynamic> buscarUsuario({required String cpf, required String cargo}) async {

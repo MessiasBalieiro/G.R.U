@@ -10,6 +10,7 @@ import '../../widgets/hover_lift.dart';
 import '../../widgets/social_login_row.dart';
 import '../../widgets/wave_transition.dart';
 import 'cadastro_screen.dart';
+import 'links_login.dart';
 import 'social_login_flow.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,17 +58,26 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _entrar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _carregando = true);
-    final ok = await _repository.login(
-      email: _emailController.text,
-      senha: _senhaController.text,
-    );
+    dynamic ok;
+    var semConexao = false;
+    try {
+      ok = await _repository.login(
+        email: _emailController.text,
+        senha: _senhaController.text,
+      );
+    } catch (_) {
+      semConexao = true;
+    }
     if (!mounted) return;
     setState(() => _carregando = false);
     if (ok != null) {
       await SocialLoginFlow.concluirLogin(context, ok);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha email e senha.')),
+        SnackBar(
+            content: Text(semConexao
+                ? 'Não foi possível entrar. Confira email e senha ou tente de novo em instantes.'
+                : 'Email ou senha incorretos.')),
       );
     }
   }
@@ -278,6 +288,11 @@ class _DesktopLayout extends StatelessWidget {
                         : const Text('Entrar'),
                   )),
                 ),
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: LinksLogin(),
+                ),
               ],
             ),
           ),
@@ -399,6 +414,11 @@ class _MobileLayout extends StatelessWidget {
                 onPressed: carregando ? null : onSubmit,
                 child: const Text('Entrar'),
               )),
+            ),
+            const SizedBox(height: 4),
+            const Align(
+              alignment: Alignment.centerRight,
+              child: LinksLogin(),
             ),
             const SizedBox(height: 40),
             Column(

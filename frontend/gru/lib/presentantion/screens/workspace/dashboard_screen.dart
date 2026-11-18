@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +15,7 @@ import '../../ciclo/ciclo_chart_frame.dart';
 import '../../ciclo/ciclo_chat_sheet.dart';
 import '../../ciclo/ciclo_controller.dart';
 import '../../ciclo/ciclo_fab.dart';
+import '../../widgets/aviso_modo_demo.dart';
 import '../../widgets/workspace_header.dart';
 
 enum _DashboardSecao { lixeiras, coletores, outras }
@@ -39,12 +41,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   var cont = 0;
 
+  /// Atualiza os dados do servidor sozinho a cada 30 segundos.
+  Timer? _timerAtualizacao;
+  static const _intervaloAtualizacao = Duration(seconds: 30);
+
   void _aoMudarCiclo() {
     if (mounted) setState(() {});
   }
 
   @override
+  void initState() {
+    super.initState();
+    _timerAtualizacao = Timer.periodic(_intervaloAtualizacao, (_) {
+      if (!mounted) return;
+      context.read<AuthProvider>().carregarConta(silencioso: true);
+    });
+  }
+
+  @override
   void dispose() {
+    _timerAtualizacao?.cancel();
     _ciclo
       ..removeListener(_aoMudarCiclo)
       ..dispose();
@@ -112,8 +128,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final providerReadUsuario = context.read<AuthProvider>();
     final providerWatchUsuario = context.watch<AuthProvider>();
 
+    final snapshot = CicloService.montarSnapshot(providerWatchUsuario, providerWatch);
     if(cont == 0) {
-      _ciclo = CicloController(snapshot: CicloService.montarSnapshot(providerWatchUsuario, providerWatch))..addListener(_aoMudarCiclo);
+      _ciclo = CicloController(snapshot: snapshot)..addListener(_aoMudarCiclo);
+    } else {
+      // Mantém o Ciclo com os dados mais recentes (atualização automática).
+      _ciclo.snapshot = snapshot;
     }
 
     cont = 1;
@@ -184,6 +204,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           accentColor: AppColors.green,
                         ),
                         const SizedBox(height: 16),
+                        if (providerWatchUsuario.modoDemo) ...[
+                          const AvisoModoDemo(),
+                          const SizedBox(height: 12),
+                        ],
                         if (providerWatchUsuario.erroCarga != null) ...[
                           const _AvisoErroCarga(),
                           const SizedBox(height: 12),
@@ -213,6 +237,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       accentColor: AppColors.green,
                     ),
                     const SizedBox(height: 16),
+                    if (providerWatchUsuario.modoDemo) ...[
+                      const AvisoModoDemo(),
+                      const SizedBox(height: 12),
+                    ],
                     if (providerWatchUsuario.erroCarga != null) ...[
                       const _AvisoErroCarga(),
                       const SizedBox(height: 12),

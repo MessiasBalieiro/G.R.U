@@ -25,7 +25,7 @@ class GruApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: AppStrings.appFullName,
+      title: 'G.R.U - ' + AppStrings.appFullName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: AppRoutes.home,

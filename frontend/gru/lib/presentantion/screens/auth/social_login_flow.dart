@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/mascaras.dart';
 import '../../../data/models/usuario_model.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../data/services/social_auth_service.dart';
@@ -144,7 +144,7 @@ class _CompletarCadastroDialogState extends State<_CompletarCadastroDialog> {
                 TextFormField(
                   controller: _cpf,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [_MascaraFormatter(_formatarCpf, 11)],
+                  inputFormatters: [MascaraFormatter.cpf()],
                   decoration: const InputDecoration(hintText: 'CPF'),
                   validator: (v) =>
                       RegExp(r'^\d{3}\.\d{3}\.\d{3}-\d{2}$').hasMatch(v ?? '')
@@ -155,7 +155,7 @@ class _CompletarCadastroDialogState extends State<_CompletarCadastroDialog> {
                 TextFormField(
                   controller: _tel,
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [_MascaraFormatter(_formatarTelefone, 11)],
+                  inputFormatters: [MascaraFormatter.telefone()],
                   decoration: const InputDecoration(hintText: 'Telefone'),
                   validator: (v) => RegExp(r'^\(\d{2}\) \d{4,5}-\d{4}$')
                           .hasMatch(v ?? '')
@@ -189,46 +189,6 @@ class _CompletarCadastroDialogState extends State<_CompletarCadastroDialog> {
           child: const Text('Criar conta'),
         ),
       ],
-    );
-  }
-}
-
-String _formatarCpf(String d) {
-  final b = StringBuffer();
-  for (var i = 0; i < d.length; i++) {
-    if (i == 3 || i == 6) b.write('.');
-    if (i == 9) b.write('-');
-    b.write(d[i]);
-  }
-  return b.toString();
-}
-
-String _formatarTelefone(String d) {
-  final b = StringBuffer();
-  for (var i = 0; i < d.length; i++) {
-    if (i == 0) b.write('(');
-    if (i == 2) b.write(') ');
-    if (d.length == 11 ? i == 7 : i == 6) b.write('-');
-    b.write(d[i]);
-  }
-  return b.toString();
-}
-
-/// Digita só números e aplica a máscara enquanto a pessoa escreve.
-class _MascaraFormatter extends TextInputFormatter {
-  _MascaraFormatter(this.formatar, this.maxDigitos);
-  final String Function(String digitos) formatar;
-  final int maxDigitos;
-
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue antigo, TextEditingValue novo) {
-    var d = novo.text.replaceAll(RegExp(r'\D'), '');
-    if (d.length > maxDigitos) d = d.substring(0, maxDigitos);
-    final t = formatar(d);
-    return TextEditingValue(
-      text: t,
-      selection: TextSelection.collapsed(offset: t.length),
     );
   }
 }

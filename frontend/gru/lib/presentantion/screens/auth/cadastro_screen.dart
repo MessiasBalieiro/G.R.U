@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/mascaras.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/animated_svg_wave.dart';
@@ -43,20 +44,41 @@ class _CadastroScreenState extends State<CadastroScreen> {
     super.dispose();
   }
 
-  String? _req(String? v, String campo) =>
-      (v == null || v.trim().isEmpty) ? 'Informe $campo' : null;
+  String? _req(String? v, String campo) => Validadores.obrigatorio(v, campo);
+
+  void _aviso(String msg) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 6)));
+  }
 
   Future<void> _cadastrar() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _aviso('Confira os campos destacados em vermelho.');
+      return;
+    }
     setState(() => _carregando = true);
-    final ok = await _repository.cadastrar(nome: _nomeCtrl.text.trim(), email: _emailCtrl.text.trim(), telefone: _telCtrl.text.trim(), cpf: _cpfCtrl.text.trim(), senha: _senhaCtrl.text, instituicao: _instCtrl.text.trim());
-    if (!mounted) return;
-    setState(() => _carregando = false);
-    if (ok != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastro realizado! Faça login.')),
-      );
-      WaveTransition.replace(context, const LoginScreen(), vindoDaDireita: false, corDaOnda: AppColors.green, nomeDaRota: AppRoutes.login);
+    try {
+      final cpf = _cpfCtrl.text.trim();
+      if (await _repository.cpfJaCadastrado(cpf)) {
+        if (!mounted) return;
+        _aviso('Este CPF já está cadastrado. Tente fazer login.');
+        return;
+      }
+      final ok = await _repository.cadastrar(nome: _nomeCtrl.text.trim(), email: _emailCtrl.text.trim(), telefone: _telCtrl.text.trim(), cpf: cpf, senha: _senhaCtrl.text, instituicao: _instCtrl.text.trim());
+      if (!mounted) return;
+      if (ok != null) {
+        _aviso('Cadastro realizado! Faça login.');
+        WaveTransition.replace(context, const LoginScreen(), vindoDaDireita: false, corDaOnda: AppColors.green, nomeDaRota: AppRoutes.login);
+      } else {
+        _aviso('Não foi possível concluir o cadastro. Verifique se o e-mail ou CPF já foram usados e se os dados estão corretos.');
+      }
+    } catch (_) {
+      if (mounted) {
+        _aviso('Sem conexão com o servidor. Verifique sua internet e tente de novo em instantes.');
+      }
+    } finally {
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
@@ -132,6 +154,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
                           nomeCtrl: _nomeCtrl,
                           senhaCtrl: _senhaCtrl,
                           instCtrl: _instCtrl,
+                          telCtrl: _telCtrl,
+                          cpfCtrl: _cpfCtrl,
                           carregando: _carregando,
                           req: _req,
                           onSubmit: _cadastrar,
@@ -223,7 +247,7 @@ class _DesktopCadastro extends StatelessWidget {
                             label: 'Email',
                             controller: emailCtrl,
                             keyboardType: TextInputType.emailAddress,
-                            validator: (v) => req(v, 'seu email')),
+                            validator: Validadores.email),
                         const SizedBox(height: 10),
                         LabeledTextField(
                             label: 'Nome',
@@ -234,19 +258,21 @@ class _DesktopCadastro extends StatelessWidget {
                             label: 'Telefone',
                             controller: telCtrl,
                             keyboardType: TextInputType.phone,
-                            validator: (v) => req(v, 'seu telefone')),
+                            inputFormatters: const [MascaraFormatter.telefone()],
+                            validator: Validadores.telefone),
                         const SizedBox(height: 10),
                         LabeledTextField(
                             label: 'CPF',
                             controller: cpfCtrl,
                             keyboardType: TextInputType.number,
-                            validator: (v) => req(v, 'seu CPF')),
+                            inputFormatters: const [MascaraFormatter.cpf()],
+                            validator: Validadores.cpf),
                         const SizedBox(height: 10),
                         LabeledTextField(
                             label: 'Senha',
                             controller: senhaCtrl,
                             obscureText: true,
-                            validator: (v) => req(v, 'uma senha')),
+                            validator: Validadores.senha),
                         const SizedBox(height: 10),
                         LabeledTextField(
                             label: 'Instituição',
@@ -341,13 +367,15 @@ class _MobileCadastro extends StatelessWidget {
     required this.nomeCtrl,
     required this.senhaCtrl,
     required this.instCtrl,
+    required this.telCtrl,
+    required this.cpfCtrl,
     required this.carregando,
     required this.req,
     required this.onSubmit,
   });
 
   final GlobalKey<FormState> formKey;
-  final TextEditingController emailCtrl, nomeCtrl, senhaCtrl, instCtrl;
+  final TextEditingController emailCtrl, nomeCtrl, senhaCtrl, instCtrl, telCtrl, cpfCtrl;
   final bool carregando;
   final String? Function(String?, String) req;
   final VoidCallback onSubmit;
@@ -383,7 +411,7 @@ class _MobileCadastro extends StatelessWidget {
                       label: 'Email',
                       controller: emailCtrl,
                       keyboardType: TextInputType.emailAddress,
-                      validator: (v) => req(v, 'seu email')),
+                      validator: Validadores.email),
                   const SizedBox(height: 10),
                   LabeledTextField(
                       label: 'Nome',
@@ -391,10 +419,24 @@ class _MobileCadastro extends StatelessWidget {
                       validator: (v) => req(v, 'seu nome')),
                   const SizedBox(height: 10),
                   LabeledTextField(
+                      label: 'Telefone',
+                      controller: telCtrl,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: const [MascaraFormatter.telefone()],
+                      validator: Validadores.telefone),
+                  const SizedBox(height: 10),
+                  LabeledTextField(
+                      label: 'CPF',
+                      controller: cpfCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: const [MascaraFormatter.cpf()],
+                      validator: Validadores.cpf),
+                  const SizedBox(height: 10),
+                  LabeledTextField(
                       label: 'Senha',
                       controller: senhaCtrl,
                       obscureText: true,
-                      validator: (v) => req(v, 'uma senha')),
+                      validator: Validadores.senha),
                   const SizedBox(height: 10),
                   LabeledTextField(
                       label: 'Instituição',
@@ -412,7 +454,9 @@ class _MobileCadastro extends StatelessWidget {
                 style: FilledButton.styleFrom(
                     backgroundColor: AppColors.green),
                 onPressed: carregando ? null : onSubmit,
-                child: const Text('Cadastrar'),
+                child: carregando
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Cadastrar'),
               )),
             ),
           ],

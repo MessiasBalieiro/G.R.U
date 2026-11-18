@@ -8,6 +8,7 @@ import '../../../data/models/lixeira_model.dart';
 import '../../../data/models/usuario_model.dart';
 import '../../../data/repositories/lixeira_repository.dart';
 import '../../../data/repositories/usuario_repository.dart';
+import '../../widgets/aviso_modo_demo.dart';
 import '../../widgets/workspace_header.dart';
 
 class CadastroLixeiraScreen extends StatefulWidget {
@@ -113,6 +114,7 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen> with Tick
   }
 
   Future<void> _cadastrarLixeira(LixeiraProvider providerRead, AuthProvider providerReadUsuario) async {
+    if (bloquearNaDemo(context)) return;
     if (_nomeController.text.trim().isEmpty || _enderecoController.text.trim().isEmpty || _coordenadaController.text.trim().isEmpty || _cpfController.text.trim().isEmpty || _nomeContratanteController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Informe todos os campos.')),
@@ -170,6 +172,7 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen> with Tick
   }
 
   Future<void> _buscarContratante(LixeiraProvider providerRead, AuthProvider providerReadUsuario) async {
+    if (bloquearNaDemo(context)) return;
     if (_cpfContratanteController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Informe o CPF do contratante.')),
