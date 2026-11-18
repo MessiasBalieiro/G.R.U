@@ -18,15 +18,20 @@ class FirebaseConfig {
   FirebaseConfig._();
 
   static const String apiKey =
-      String.fromEnvironment('FIREBASE_API_KEY', defaultValue: '');
+      String.fromEnvironment('FIREBASE_API_KEY',
+          defaultValue: 'AIzaSyDzpK3zGCjBmBBe75ZmtKRFZNf7tabw86U');
   static const String authDomain =
-      String.fromEnvironment('FIREBASE_AUTH_DOMAIN', defaultValue: '');
+      String.fromEnvironment('FIREBASE_AUTH_DOMAIN',
+          defaultValue: 'g-r-u-26bbc.firebaseapp.com');
   static const String projectId =
-      String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: '');
+      String.fromEnvironment('FIREBASE_PROJECT_ID',
+          defaultValue: 'g-r-u-26bbc');
   static const String appId =
-      String.fromEnvironment('FIREBASE_APP_ID', defaultValue: '');
+      String.fromEnvironment('FIREBASE_APP_ID',
+          defaultValue: '1:424988247295:web:1b35fd6894037dcdec38ca');
   static const String messagingSenderId =
-      String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID', defaultValue: '');
+      String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID',
+          defaultValue: '424988247295');
 
   static bool get configurado =>
       apiKey.isNotEmpty &&
