@@ -12,6 +12,10 @@ class AppImages {
   static const solucao = 'assets/images/solucao.png';
   static const heroBg = 'assets/images/hero_bg.jpg';
 
+  /// Print da tela principal do app Android (página de download).
+  /// Se o arquivo não existir, a página usa uma ilustração no lugar.
+  static const appPreview = 'assets/images/app_preview.png';
+
   static const googleLogo = 'assets/logos/google.png';
   static const appleLogo = 'assets/logos/apple.png';
   static const microsoftLogo = 'assets/logos/microsoft.png';
