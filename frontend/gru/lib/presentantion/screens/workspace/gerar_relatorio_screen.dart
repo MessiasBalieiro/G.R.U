@@ -55,7 +55,7 @@ class _GerarRelatorioScreenState extends State<GerarRelatorioScreen> {
       final RelatorioDados dados;
       switch (opcao.id) {
         case 'tipos_residuo':
-          final residuos = auth.modoDemo
+          final residuos = auth.usandoDadosExemplo
               ? DemoData.residuos()
               : await RelatorioService.buscarResiduos();
           dados = RelatorioService.tiposResiduo(

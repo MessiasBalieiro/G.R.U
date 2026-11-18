@@ -29,7 +29,6 @@ class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
   final auth = context.watch<AuthProvider>();
   final cargoUsuario = auth.usuario?.cargoUsuario;
   final usuario = auth.usuario;
-  final demo = auth.modoDemo;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -73,7 +72,7 @@ class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
                           child: GruMascot(size: 32),
                         ),
                         SizedBox(width: 12),
-                        Expanded(child: _BarraUsuario(usuario: usuario, demo: demo)),
+                        Expanded(child: _BarraUsuario(usuario: usuario)),
                         SizedBox(width: 8),
                         OutlinedButton.icon(
                           onPressed: _sair,
@@ -173,10 +172,9 @@ class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
 
 /// "Olá, Nome" + instituição (e selo de demonstração) no topo.
 class _BarraUsuario extends StatelessWidget {
-  const _BarraUsuario({required this.usuario, required this.demo});
+  const _BarraUsuario({required this.usuario});
 
   final UsuarioModel? usuario;
-  final bool demo;
 
   @override
   Widget build(BuildContext context) {
@@ -200,20 +198,6 @@ class _BarraUsuario extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: Colors.black54, fontSize: 12),
-          ),
-        if (demo)
-          Container(
-            margin: EdgeInsets.only(top: 4),
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.green.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text('Modo demonstração',
-                style: TextStyle(
-                    color: AppColors.green,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold)),
           ),
       ],
     );

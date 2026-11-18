@@ -22,34 +22,26 @@ class AuthProvider extends ChangeNotifier {
 
   bool _restaurando = true;
   bool _carregandoConta = false;
-  bool _modoDemo = false;
+  bool _dadosExemplo = false;
   String? _erroCarga;
 
   /// `true` enquanto o site confere se havia um login salvo (ao abrir/recarregar).
   bool get restaurando => _restaurando;
   bool get carregandoConta => _carregandoConta;
 
-  /// `true` no modo demonstração (dados de exemplo, sem servidor).
-  bool get modoDemo => _modoDemo;
+  /// `true` quando o servidor falhou e a tela mostra dados de exemplo.
+  bool get usandoDadosExemplo => _dadosExemplo;
 
-  /// Entra com dados de exemplo, sem precisar de conta nem do servidor.
-  void entrarModoDemo() {
-    _modoDemo = true;
-    _erroCarga = null;
-    _usuario = UsuarioModel.fromJson(DemoData.usuario());
+  void _carregarExemplo() {
+    _dadosExemplo = true;
     _coletores.clear();
     _adicionarColetores(DemoData.coletores());
     _lixeiraProvider?.definirLixeiras(DemoData.lixeiras());
     _organizacao = DemoData.organizacao();
-    _restaurando = false;
-    notifyListeners();
   }
 
-  /// Mensagem quando os dados da conta não puderam ser carregados do servidor.
-  String? get erroCarga => _erroCarga;
-
   void definirUsuario(UsuarioModel usuario) {
-    _modoDemo = false;
+    _dadosExemplo = false;
     _usuario = usuario;
     _salvarSessao(usuario);
     notifyListeners();
@@ -96,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
   /// falhar, mantém os dados que já estavam na tela.
   Future<void> carregarConta({bool silencioso = false}) async {
     final usuario = _usuario;
-    if (usuario == null || _modoDemo) return;
+    if (usuario == null) return;
 
     if (!silencioso) {
       _carregandoConta = true;
@@ -132,18 +124,17 @@ class AuthProvider extends ChangeNotifier {
     }
 
     // Se o usuário saiu da conta (ou entrou na demo) durante a espera, descarta.
-    if (_usuario?.id != usuario.id || _modoDemo) {
+    if (_usuario?.id != usuario.id) {
       _carregandoConta = false;
       return;
     }
 
     if (falhou) {
-      if (!silencioso) {
-        _erroCarga = 'Não foi possível carregar os dados do servidor.';
-        _organizacao ??= {'colectors': [], 'trashes': [], 'history': []};
-      }
+      // Servidor com problema: mostra dados de exemplo (com aviso na tela).
+      if (!silencioso) _carregarExemplo();
     } else {
       _erroCarga = null;
+      _dadosExemplo = false;
       _coletores.clear();
       if (coletoresNovos != null) _adicionarColetores(coletoresNovos);
       if (lixeirasNovas != null) _lixeiraProvider?.definirLixeiras(lixeirasNovas);
@@ -198,7 +189,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void logout() {
-    _modoDemo = false;
+    _dadosExemplo = false;
     _limparSessao();
     _erroCarga = null;
     _usuario = null;

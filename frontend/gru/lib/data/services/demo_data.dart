@@ -1,6 +1,6 @@
 import '../models/residuo_model.dart';
 
-/// Dados de exemplo do **Modo demonstração** (não dependem do servidor).
+/// Dados de exemplo do de reserva, usados quando o servidor falha.
 class DemoData {
   DemoData._();
 

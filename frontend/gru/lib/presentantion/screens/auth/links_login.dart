@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../core/utils/mascaras.dart';
 import '../../../data/services/contato_service.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../routes/app_routes.dart';
 
-/// Links abaixo do botão Entrar: "Esqueci minha senha" e "Modo demonstração".
+/// Link abaixo do botão Entrar: "Esqueci minha senha".
 class LinksLogin extends StatelessWidget {
   const LinksLogin({super.key, this.alinhamento = WrapAlignment.end});
 
@@ -26,14 +23,6 @@ class LinksLogin extends StatelessWidget {
           onPressed: () => showDialog(
               context: context, builder: (_) => const _EsqueciSenhaDialog()),
           child: const Text('Esqueci minha senha', style: estilo),
-        ),
-        TextButton(
-          onPressed: () {
-            context.read<AuthProvider>().entrarModoDemo();
-            Navigator.of(context).pushNamedAndRemoveUntil(
-                AppRoutes.areaTrabalho, (_) => false);
-          },
-          child: const Text('Modo demonstração', style: estilo),
         ),
       ],
     );
