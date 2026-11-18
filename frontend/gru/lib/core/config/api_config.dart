@@ -12,4 +12,21 @@ class ApiConfig {
     'GRU_API_URL',
     defaultValue: 'https://backend-gru.vercel.app',
   );
+
+  /// E-mail da equipe que recebe as perguntas do formulário da Home.
+  static const String contatoEmail = 'gru.equipe.atendimento@gmail.com';
+
+  /// Serviço gratuito (FormSubmit) que encaminha o formulário por e-mail,
+  /// sem precisar de backend. Exige confirmar o e-mail uma única vez.
+  static const String contatoEndpoint =
+      'https://formsubmit.co/ajax/$contatoEmail';
+
+  /// Link do APK Android (asset `gru.apk` da última Release do GitHub).
+  /// Pode ser trocado na hora do build:
+  ///   --dart-define=GRU_APK_URL=https://seu-link/gru.apk
+  static const String apkUrl = String.fromEnvironment(
+    'GRU_APK_URL',
+    defaultValue:
+        'https://github.com/MessiasBalieiro/G.R.U/releases/latest/download/gru.apk',
+  );
 }

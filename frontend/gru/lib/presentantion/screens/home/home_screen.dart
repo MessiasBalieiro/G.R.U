@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
@@ -9,6 +10,7 @@ import '../../widgets/gru_mascot.dart';
 import '../../widgets/quem_somos_card.dart';
 import '../../widgets/depth_card.dart';
 import '../../widgets/app_footer.dart';
+import '../../../data/services/contato_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -367,8 +369,12 @@ class _FaqSection extends StatefulWidget {
 
 class _FaqSectionState extends State<_FaqSection> {
   final _controller = TextEditingController();
+  final _emailController = TextEditingController();
   final _focusNode = FocusNode();
+  final _contatoService = const ContatoService();
   bool _focado = false;
+  bool _enviando = false;
+  int? _faqAberta;
 
   @override
   void initState() {
@@ -379,9 +385,68 @@ class _FaqSectionState extends State<_FaqSection> {
   @override
   void dispose() {
     _controller.dispose();
+    _emailController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
+
+  void _aviso(String texto, {bool erro = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: erro ? Colors.red.shade600 : AppColors.green,
+        content: Text(texto),
+      ),
+    );
+  }
+
+  Future<void> _enviar() async {
+    final texto = _controller.text.trim();
+    final email = _emailController.text.trim();
+    if (texto.length < 5) {
+      _aviso('Escreva sua pergunta antes de enviar.', erro: true);
+      return;
+    }
+    if (email.isNotEmpty && !email.contains('@')) {
+      _aviso('Esse e-mail não parece válido.', erro: true);
+      return;
+    }
+    setState(() => _enviando = true);
+    final ok =
+        await _contatoService.enviar(mensagem: texto, emailRetorno: email);
+    if (!mounted) return;
+    setState(() => _enviando = false);
+    if (ok) {
+      _controller.clear();
+      _emailController.clear();
+      _aviso('Pergunta enviada! Em breve a equipe responde.');
+    } else {
+      _aviso(
+        'Não foi possível enviar agora. Tente de novo ou escreva para '
+        '${ApiConfig.contatoEmail}.',
+        erro: true,
+      );
+    }
+  }
+
+  BoxDecoration _campo(bool destaque) => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: destaque ? AppColors.orange : AppColors.placeholder,
+          width: destaque ? 1.6 : 1,
+        ),
+      );
+
+  static const _semBorda = InputDecoration(
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    errorBorder: InputBorder.none,
+    focusedErrorBorder: InputBorder.none,
+    disabledBorder: InputBorder.none,
+    filled: false,
+    contentPadding: EdgeInsets.symmetric(vertical: 10),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -403,28 +468,14 @@ class _FaqSectionState extends State<_FaqSection> {
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: _focado ? AppColors.orange : AppColors.placeholder,
-                      width: _focado ? 1.6 : 1,
-                    ),
-                  ),
+                  decoration: _campo(_focado),
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
-                    decoration: const InputDecoration(
-                      hintText: 'Escreva sua pergunta...',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      filled: false,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10),
-                    ),
+                    enabled: !_enviando,
+                    onSubmitted: (_) => _enviar(),
+                    decoration: _semBorda.copyWith(
+                        hintText: 'Escreva sua pergunta...'),
                   ),
                 ),
               ),
@@ -432,20 +483,31 @@ class _FaqSectionState extends State<_FaqSection> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.green),
-                onPressed: () {
-                  final texto = _controller.text.trim();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(texto.isEmpty
-                          ? 'Escreva uma pergunta antes de enviar.'
-                          : 'Pergunta enviada! Em breve retornamos.'),
-                    ),
-                  );
-                  if (texto.isNotEmpty) _controller.clear();
-                },
-                child: const Text('Enviar'),
+                onPressed: _enviando ? null : _enviar,
+                child: _enviando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Enviar'),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: _campo(false),
+            child: TextField(
+              controller: _emailController,
+              enabled: !_enviando,
+              keyboardType: TextInputType.emailAddress,
+              decoration: _semBorda.copyWith(
+                hintText: 'Seu e-mail (opcional, para recebermos sua resposta)',
+                hintStyle: const TextStyle(fontSize: 13),
+              ),
+            ),
           ),
         ],
       );
@@ -457,22 +519,13 @@ class _FaqSectionState extends State<_FaqSection> {
           const Text(AppStrings.faqRespondidasTitulo,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(height: 10),
-          for (final p in AppStrings.faqPerguntas)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: InkWell(
-                onTap: () {},
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: Text(p,
-                            style: const TextStyle(
-                                fontSize: 13.5, color: AppColors.dark))),
-                    const Icon(Icons.arrow_forward_rounded,
-                        size: 16, color: AppColors.orange),
-                  ],
-                ),
-              ),
+          for (var i = 0; i < AppStrings.faqItens.length; i++)
+            _FaqItem(
+              pergunta: AppStrings.faqItens[i].pergunta,
+              resposta: AppStrings.faqItens[i].resposta,
+              aberta: _faqAberta == i,
+              onTap: () =>
+                  setState(() => _faqAberta = _faqAberta == i ? null : i),
             ),
         ],
       );
@@ -493,5 +546,88 @@ class _FaqSectionState extends State<_FaqSection> {
         ],
       );
     });
+  }
+}
+
+/// Pergunta que expande e mostra a resposta ao clicar.
+class _FaqItem extends StatelessWidget {
+  const _FaqItem({
+    required this.pergunta,
+    required this.resposta,
+    required this.aberta,
+    required this.onTap,
+  });
+
+  final String pergunta;
+  final String resposta;
+  final bool aberta;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: aberta ? AppColors.orange : AppColors.placeholder,
+            width: aberta ? 1.4 : 1,
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        pergunta,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight:
+                              aberta ? FontWeight.w700 : FontWeight.w500,
+                          color: AppColors.dark,
+                        ),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: aberta ? 0.25 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      child: const Icon(Icons.arrow_forward_rounded,
+                          size: 16, color: AppColors.orange),
+                    ),
+                  ],
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  alignment: Alignment.topCenter,
+                  child: aberta
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            resposta,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: AppColors.textMuted),
+                          ),
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

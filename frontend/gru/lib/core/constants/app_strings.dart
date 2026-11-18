@@ -35,9 +35,28 @@ class AppStrings {
   static const faqTitulo = 'Alguma pergunta para o G.R.U?';
   static const faqSubtitulo = 'Envie sua pergunta ou feedback para nós!';
   static const faqRespondidasTitulo = 'Dúvidas já respondidas';
-  static const List<String> faqPerguntas = [
-    'Como funciona a lixeira inteligente?',
-    'Quais cidades já usam o G.R.U?',
-    'Como minha instituição pode participar?',
+  static const List<({String pergunta, String resposta})> faqItens = [
+    (
+      pergunta: 'Como funciona a lixeira inteligente?',
+      resposta:
+          'Sensores instalados na lixeira medem o nível de ocupação e '
+          'identificam o tipo de resíduo descartado. Esses dados são enviados '
+          'automaticamente para o painel do G.R.U, onde você acompanha tudo '
+          'em tempo real.',
+    ),
+    (
+      pergunta: 'Quais cidades já usam o G.R.U?',
+      resposta:
+          'O G.R.U ainda está em desenvolvimento e em fase de testes, então '
+          'não temos cidades parceiras por enquanto. Se quiser ser uma das '
+          'primeiras, é só nos enviar uma mensagem pelo campo acima!',
+    ),
+    (
+      pergunta: 'Como minha instituição pode participar?',
+      resposta:
+          'Crie uma conta na tela de Cadastro informando o nome da sua '
+          'instituição. Depois, na Área de Trabalho, você cadastra suas '
+          'lixeiras e coletores e acompanha tudo pelo painel.',
+    ),
   ];
 }
