@@ -9,7 +9,7 @@ import '../../data/models/lixeira_model.dart';
 /// o usuário escolher) e, se não houver app, cai para o Google Maps no
 /// navegador.
 Future<void> abrirNoMapa(BuildContext context, LixeiraModel l) async {
-  final consulta = Uri.encodeComponent(l.enderecoCompleto);
+  final consulta = Uri.encodeComponent(l.enderecoLixeira);
   final geo = Uri.parse('geo:0,0?q=$consulta');
   final web =
       Uri.parse('https://www.google.com/maps/search/?api=1&query=$consulta');

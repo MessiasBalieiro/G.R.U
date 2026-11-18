@@ -30,8 +30,11 @@ class LixeiraCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = lixeira;
-    final cor = corDoStatus(l.status);
-    final material = l.materialPredominante;
+    final cor = corDoStatus(l.statusLixeira);
+    final ordenados = l.composicao.entries.toList()..sort((a, b) {
+      return (b.value as num).compareTo(a.value as num);
+    });
+    final material = ordenados;
 
     return WhiteCard(
       onTap: onTap,
@@ -55,7 +58,7 @@ class LixeiraCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l.nome,
+                      l.nomeLixeira,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -72,7 +75,7 @@ class LixeiraCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         Expanded(
                           child: Text(
-                            l.endereco,
+                            l.enderecoLixeira,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -86,7 +89,7 @@ class LixeiraCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '${l.ocupacao}%',
+                '${((l.quantidadeResiduo * 100) / 120).round()}%',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -96,7 +99,7 @@ class LixeiraCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          CapacityBar(ocupacao: l.ocupacao),
+          CapacityBar(lixeira: l),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -105,10 +108,8 @@ class LixeiraCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 6,
                   children: [
-                    StatusChip(status: l.status),
-                    if (material != null)
-                      MaterialChip(
-                          tipo: material, percentual: l.percentualPredominante),
+                    StatusChip(status: l.statusLixeira),
+                    MaterialChip(tipo: material[0].key, lixeira: l, percentual: ((l.composicao[ordenados[0].key]! * 100) / l.quantidadeResiduo).round()),
                   ],
                 ),
               ),

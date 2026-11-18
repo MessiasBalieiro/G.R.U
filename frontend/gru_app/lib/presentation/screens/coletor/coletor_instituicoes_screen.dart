@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/lixeira_provider.dart';
+import 'package:gru_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/domain_styles.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../data/models/instituicao_model.dart';
-import '../../../data/services/mock_data_service.dart';
-import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gru_scaffold.dart';
@@ -18,14 +17,17 @@ class ColetorInstituicoesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = SessionService.instance.usuario!;
-    final db = MockDataService.instance;
+    final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    final providerWatchUsuario = context.watch<AuthProvider>();
+    
+    // final db = MockDataService.instance;
 
     return ListenableBuilder(
-      listenable: db,
+      listenable: providerWatchUsuario,
       builder: (context, _) {
-        final vinculos = usuario.vinculos.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+        final vinculos = providerWatchUsuario.organizacoes;
 
         if (vinculos.isEmpty) {
           return const GruScaffold(
@@ -46,13 +48,14 @@ class ColetorInstituicoesScreen extends StatelessWidget {
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 150),
             itemCount: vinculos.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, i) {
-              final inst = db.instituicaoPorId(vinculos[i].key);
+              final inst = vinculos[i];
               if (inst == null) return const SizedBox.shrink();
               return _InstituicaoCard(
                 instituicao: inst,
-                desde: vinculos[i].value,
+                lixeiraProvider: providerWatch,
+                userProvider: providerWatchUsuario,
               );
             },
           ),
@@ -63,10 +66,11 @@ class ColetorInstituicoesScreen extends StatelessWidget {
 }
 
 class _InstituicaoCard extends StatefulWidget {
-  const _InstituicaoCard({required this.instituicao, required this.desde});
+  const _InstituicaoCard({required this.instituicao, required this.lixeiraProvider, required this.userProvider});
 
-  final InstituicaoModel instituicao;
-  final DateTime desde;
+  final dynamic instituicao;
+  final LixeiraProvider lixeiraProvider;
+  final AuthProvider userProvider;
 
   @override
   State<_InstituicaoCard> createState() => _InstituicaoCardState();
@@ -77,11 +81,9 @@ class _InstituicaoCardState extends State<_InstituicaoCard> {
 
   @override
   Widget build(BuildContext context) {
-    final db = MockDataService.instance;
     final inst = widget.instituicao;
-    final lixeiras = db.lixeirasDasInstituicoes([inst.id])
-      ..sort((a, b) => b.ocupacao.compareTo(a.ocupacao));
-    final prioritarias = lixeiras.where((l) => l.status.codigo >= 3).length;
+    final lixeiras = widget.lixeiraProvider.lixeiras.where((l) => l.codigoDonoLixeira == inst['id_contratante']);
+    final prioritarias = lixeiras.where((l) => l.statusLixeira.codigo >= 3).length;
 
     return WhiteCard(
       padding: EdgeInsets.zero,
@@ -121,12 +123,6 @@ class _InstituicaoCardState extends State<_InstituicaoCard> {
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
                               color: AppColors.dark),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${inst.cidade} · desde ${Fmt.mesAno(widget.desde)}',
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textMuted),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -184,19 +180,19 @@ class _InstituicaoCardState extends State<_InstituicaoCard> {
                               child: Row(
                                 children: [
                                   Icon(Icons.delete_rounded,
-                                      size: 18, color: corDoStatus(l.status)),
+                                      size: 18, color: corDoStatus(l.statusLixeira)),
                                   const SizedBox(width: 10),
                                   Expanded(
-                                    child: Text(l.nome,
+                                    child: Text(l.nomeLixeira,
                                         style: const TextStyle(
                                             fontSize: 13,
                                             color: AppColors.dark)),
                                   ),
-                                  Text('${l.ocupacao}%',
+                                  Text('${l.quantidadeResiduo}%',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 13,
-                                          color: corDoStatus(l.status))),
+                                          color: corDoStatus(l.statusLixeira))),
                                   const Icon(Icons.chevron_right_rounded,
                                       size: 18, color: AppColors.textMuted),
                                 ],

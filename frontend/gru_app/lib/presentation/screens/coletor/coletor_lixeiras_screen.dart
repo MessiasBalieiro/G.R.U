@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/lixeira_provider.dart';
+import 'package:gru_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../data/services/mock_data_service.dart';
-import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gru_scaffold.dart';
@@ -53,23 +54,23 @@ class _ColetorLixeirasScreenState extends State<ColetorLixeirasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = SessionService.instance.usuario!;
-    final db = MockDataService.instance;
+    final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    final providerWatchUsuario = context.watch<AuthProvider>();
+
+    final usuario = providerWatchUsuario.usuario;
+    // final db = MockDataService.instance;
 
     return ListenableBuilder(
-      listenable: db,
+      listenable: providerWatch,
       builder: (context, _) {
-        final todas = db.lixeirasDasInstituicoes(usuario.instituicaoIds);
+        final todas = providerWatch.lixeiras;
         final termo = _termo.trim().toLowerCase();
         final lista = todas
             .where((l) =>
-                _passa(l.status.codigo) &&
-                (termo.isEmpty ||
-                    l.nome.toLowerCase().contains(termo) ||
-                    l.endereco.toLowerCase().contains(termo) ||
-                    l.cep.replaceAll('-', '').contains(termo.replaceAll('-', ''))))
-            .toList()
-          ..sort((a, b) => b.ocupacao.compareTo(a.ocupacao));
+                _passa(l.statusLixeira.codigo) &&
+                (termo.isEmpty || l.nomeLixeira.toLowerCase().contains(termo) || l.enderecoLixeira.toLowerCase().contains(termo))).toList()..sort((a, b) => b.quantidadeResiduo.compareTo(a.quantidadeResiduo));
 
         return GruScaffold(
           title: 'Lixeiras',
@@ -78,7 +79,7 @@ class _ColetorLixeirasScreenState extends State<ColetorLixeirasScreen> {
               ? EmptyState(
                   icon: Icons.link_off_rounded,
                   titulo: 'Sem lixeiras por aqui',
-                  mensagem: usuario.vinculos.isEmpty
+                  mensagem: usuario!.instituicoes.isEmpty
                       ? 'Você ainda não está vinculado a nenhuma instituição. '
                           'Peça ao administrador para vincular você.'
                       : 'As instituições vinculadas ainda não têm lixeiras.',
@@ -121,16 +122,15 @@ class _ColetorLixeirasScreenState extends State<ColetorLixeirasScreen> {
                               padding:
                                   const EdgeInsets.fromLTRB(20, 6, 20, 150),
                               itemCount: lista.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, _) =>
                                   const SizedBox(height: 12),
                               itemBuilder: (context, i) {
                                 final l = lista[i];
-                                final inst =
-                                    db.instituicaoPorId(l.instituicaoId);
+                                final inst = providerWatchUsuario.organizacoes.where((item) => item['id_contratante'] == l.codigoDonoLixeira);
                                 return LixeiraCard(
                                   lixeira: l,
                                   mostrarMapa: true,
-                                  rodape: inst?.nome,
+                                  rodape: inst.first['organization_name'],
                                   onTap: () => Navigator.of(context)
                                       .pushNamed(AppRoutes.lixeira,
                                           arguments: l.id),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../data/models/usuario_model.dart';
 import '../presentation/screens/admin/admin_coletores_screen.dart';
 import '../presentation/screens/admin/admin_dashboard_screen.dart';
 import '../presentation/screens/admin/admin_home_screen.dart';
@@ -41,8 +40,8 @@ class AppRoutes {
   /// Recebe o `id` da lixeira em `arguments`.
   static const lixeira = '/lixeira';
 
-  static String homePara(TipoUsuario tipo) =>
-      tipo == TipoUsuario.administrador ? adminHome : coletorHome;
+  static String homePara(String tipo) =>
+      tipo == "CONTRATANTE" ? adminHome : coletorHome;
 
   static Map<String, WidgetBuilder> get table => {
         loading: (_) => const LoadingScreen(),

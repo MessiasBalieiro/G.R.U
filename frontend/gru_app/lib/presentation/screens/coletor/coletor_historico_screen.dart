@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/lixeira_provider.dart';
+import 'package:gru_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/domain_styles.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../data/models/lixeira_model.dart';
-import '../../../data/models/visita_model.dart';
-import '../../../data/services/mock_data_service.dart';
-import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
-import '../../widgets/capacity.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gru_scaffold.dart';
 import '../../widgets/white_card.dart';
@@ -19,15 +16,47 @@ class ColetorHistoricoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = SessionService.instance.usuario!;
-    final db = MockDataService.instance;
+    final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    final providerWatchUsuario = context.watch<AuthProvider>();
+    
+    final usuario = providerWatchUsuario.usuario;
+    final history = usuario?.history;
+    // final db = MockDataService.instance;
+
+    String calcularDiferenca(String dataInformada) {
+      final partes = dataInformada.split(', ');
+      final data = partes[0].split('/');
+      final horario = partes[1].split(':');
+
+      final dataUsuario = DateTime(
+        int.parse(data[2]), // Ano
+        int.parse(data[1]), // Mês
+        int.parse(data[0]), // Dia
+        int.parse(horario[0]), // Hora
+        int.parse(horario[1]), // Minuto
+      );
+
+      final dataAtual = DateTime.now();
+      final diferenca = dataAtual.difference(dataUsuario);
+
+      final horas = diferenca.inHours;
+      final dias = diferenca.inDays;
+
+      if (horas < 24) {
+        return '$horas hora(s)';
+      } else {
+        return '$dias dia(s)';
+      }
+    }
 
     return ListenableBuilder(
-      listenable: db,
+      listenable: providerWatchUsuario,
       builder: (context, _) {
-        final visitas = db.visitasDoColetor(usuario.id);
+        final visitas = usuario?.coletasRealizadas;
 
-        if (visitas.isEmpty) {
+        if (visitas == 0 || visitas != null) {
           return const GruScaffold(
             title: 'Histórico',
             background: kFundoColetor,
@@ -40,19 +69,17 @@ class ColetorHistoricoScreen extends StatelessWidget {
           );
         }
 
-        final limite = DateTime.now().subtract(const Duration(days: 30));
-        final recentes = visitas.where((v) => v.dataHora.isAfter(limite)).length;
-        final distintas = visitas.map((v) => v.lixeiraId).toSet().length;
+        // final limite = DateTime.now().subtract(const Duration(days: 30));
 
         // Agrupa por dia (a lista já vem ordenada da mais recente).
         final itens = <Object>[];
         String? diaAtual;
-        for (final v in visitas) {
-          final rotulo = Fmt.rotuloDia(v.dataHora);
-          final chave = '${v.dataHora.year}-${v.dataHora.month}-${v.dataHora.day}';
+        for (final v in history!) {
+          // final rotulo = v['time_action'].split(", ")[1];
+          final chave = v['time_action'].split(", ")[0];
           if (chave != diaAtual) {
             diaAtual = chave;
-            itens.add(rotulo);
+            itens.add(chave);
           }
           itens.add(v);
         }
@@ -66,30 +93,23 @@ class ColetorHistoricoScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                      child: _Resumo(
-                          valor: '$recentes', rotulo: 'Coletas\n(30 dias)')),
+                      child: _Resumo(valor: '${usuario?.coletasRealizadas}', rotulo: 'Coletas')),
                   const SizedBox(width: 10),
                   Expanded(
-                      child: _Resumo(
-                          valor: '$distintas', rotulo: 'Lixeiras\nvisitadas')),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: _Resumo(
-                          valor: Fmt.relativo(visitas.first.dataHora)
-                              .replaceFirst('Há ', ''),
-                          rotulo: 'Última\nvisita')),
+                      child: _Resumo(valor: calcularDiferenca(history[0]['time_action']), rotulo: 'Última\nvisita')),
                 ],
               ),
               const SizedBox(height: 18),
               for (final item in itens)
-                if (item is VisitaModel)
+                if (item is Map)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _VisitaCard(
                       visita: item,
                       onTap: () => Navigator.of(context).pushNamed(
                           AppRoutes.lixeira,
-                          arguments: item.lixeiraId),
+                          arguments: item['trash_id']),
+                      provider: providerWatch
                     ),
                   )
                 else
@@ -148,15 +168,17 @@ class _Resumo extends StatelessWidget {
 }
 
 class _VisitaCard extends StatelessWidget {
-  const _VisitaCard({required this.visita, required this.onTap});
+  const _VisitaCard({required this.visita, required this.onTap, required this.provider});
 
-  final VisitaModel visita;
+  final Map<dynamic, dynamic> visita;
   final VoidCallback onTap;
+  final LixeiraProvider provider;
 
   @override
   Widget build(BuildContext context) {
     final v = visita;
-    final cor = corDoStatus(StatusLixeira.fromOcupacao(v.ocupacao));
+    
+    final cor = corDoStatus(provider.buscarLixeira(v["trash_id"])!.statusLixeira);
 
     return WhiteCard(
       onTap: onTap,
@@ -180,7 +202,7 @@ class _VisitaCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        v.lixeiraNome,
+                        v['trash_name'],
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -192,7 +214,7 @@ class _VisitaCard extends StatelessWidget {
                     const Icon(Icons.schedule_rounded,
                         size: 14, color: AppColors.textMuted),
                     const SizedBox(width: 3),
-                    Text(Fmt.hora(v.dataHora),
+                    Text(v['time_action'].split(", ")[1],
                         style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -206,7 +228,7 @@ class _VisitaCard extends StatelessWidget {
                         size: 14, color: AppColors.textMuted),
                     const SizedBox(width: 3),
                     Expanded(
-                      child: Text(v.endereco,
+                      child: Text(provider.buscarLixeira(v["trash_id"])!.enderecoLixeira,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -227,17 +249,14 @@ class _VisitaCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Estava ${v.ocupacao}% cheia',
+                        v['action'],
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: v.ocupacao >= 40 && v.ocupacao < 70
-                              ? const Color(0xFF9A6A0E)
-                              : cor,
+                          color: const Color(0xFF9A6A0E),
                         ),
                       ),
                     ),
-                    if (v.material != null) MaterialChip(tipo: v.material!),
                   ],
                 ),
               ],

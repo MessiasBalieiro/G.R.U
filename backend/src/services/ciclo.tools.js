@@ -20,7 +20,7 @@
  * }
  */
 
-import { buscarConhecimento } from "./ciclo.rag.service.js";
+import { buscarConhecimento } from "./Ciclo.rag.service.js";
 
 const LIMITE_CHEIA = 90; // % a partir do qual a lixeira é considerada cheia
 

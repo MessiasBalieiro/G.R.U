@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
-import '../../data/services/session_service.dart';
 import '../../routes/app_routes.dart';
 
 /// Botão "Sair" usado no canto do header das Homes.
@@ -13,7 +14,7 @@ class LogoutButton extends StatelessWidget {
       tooltip: 'Sair',
       icon: const Icon(Icons.logout_rounded, color: Colors.white70, size: 20),
       onPressed: () {
-        SessionService.instance.sair();
+        context.read<AuthProvider>().logout();
         Navigator.of(context)
             .pushNamedAndRemoveUntil(AppRoutes.welcome, (_) => false);
       },

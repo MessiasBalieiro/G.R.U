@@ -13,7 +13,7 @@ class CicloController extends ChangeNotifier {
   }) : _service = service ?? CicloService();
 
   /// Função que monta o snapshot com os dados atuais do Dashboard.
-  final Map<String, dynamic> Function() snapshot;
+  final Map<String, dynamic> snapshot;
   final CicloService _service;
 
   final List<CicloMensagem> _mensagens = [
@@ -51,7 +51,7 @@ class CicloController extends ChangeNotifier {
     try {
       final r = await _service.perguntar(
         pergunta: pergunta,
-        snapshot: snapshot(),
+        snapshot: snapshot,
         historico: historico.skip(1).toList(), // sem a saudação
       );
       _modo = r.modo;

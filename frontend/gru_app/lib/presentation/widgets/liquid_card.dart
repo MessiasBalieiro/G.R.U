@@ -83,7 +83,7 @@ class _LiquidCardState extends State<LiquidCard> with TickerProviderStateMixin {
             Positioned.fill(
               child: AnimatedBuilder(
                 animation: Listenable.merge([_level, _wave]),
-                builder: (_, __) {
+                builder: (_, _) {
                   if (_level.value <= 0) return const SizedBox.shrink();
                   return ClipPath(
                     clipper: _LiquidClipper(
@@ -106,7 +106,7 @@ class _LiquidCardState extends State<LiquidCard> with TickerProviderStateMixin {
                 children: [
                   AnimatedBuilder(
                     animation: _level,
-                    builder: (_, __) {
+                    builder: (_, _) {
                       final c =
                           Color.lerp(widget.color, Colors.white, _level.value)!;
                       return Container(

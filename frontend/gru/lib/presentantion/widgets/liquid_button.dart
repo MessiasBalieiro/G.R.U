@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
 
 /// Botão com efeito de preenchimento líquido no hover.
 ///
@@ -98,7 +97,7 @@ class _LiquidButtonState extends State<LiquidButton>
               // ── 2. Líquido subindo ────────────────────────────────────
               AnimatedBuilder(
                 animation: Listenable.merge([_fillAnim, _waveCtrl]),
-                builder: (_, __) {
+                builder: (_, _) {
                   if (_fillAnim.value <= 0) return const SizedBox.shrink();
                   return ClipPath(
                     clipper: _LiquidClipper(
@@ -118,7 +117,7 @@ class _LiquidButtonState extends State<LiquidButton>
               // ── 3. Conteúdo (ícone + texto, cor animada) ─────────────
               AnimatedBuilder(
                 animation: _fillAnim,
-                builder: (_, __) {
+                builder: (_, _) {
                   // Ajusta o progresso de transição da cor de acordo com o limite definido
                   final colorProgress = widget.maxFillLevel > 0
                       ? (_fillAnim.value / widget.maxFillLevel).clamp(0.0, 1.0)

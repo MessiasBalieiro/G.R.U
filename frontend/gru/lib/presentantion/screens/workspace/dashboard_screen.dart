@@ -1,12 +1,15 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/models/ciclo_model.dart';
-import '../../../data/models/coletor_model.dart';
 import '../../../data/models/lixeira_model.dart';
+import '../../../data/models/usuario_model.dart';
 import '../../../data/services/ciclo_service.dart';
-import '../../../data/services/mock_data_service.dart';
+// import '../../../data/services/mock_data_service.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/lixeira_provider.dart';
 import '../../ciclo/ciclo_chart_frame.dart';
 import '../../ciclo/ciclo_chat_sheet.dart';
 import '../../ciclo/ciclo_controller.dart';
@@ -26,12 +29,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   _DashboardSecao _secao = _DashboardSecao.lixeiras;
 
   // ── Ciclo (chatbot do Dashboard) ────────────────────────────────────────
-  late final CicloController _ciclo =
-      CicloController(snapshot: CicloService.montarSnapshot)
-        ..addListener(_aoMudarCiclo);
+  late final CicloController _ciclo;
+  // late final CicloController _ciclo =
+  //     CicloController(snapshot: CicloService.montarSnapshot)
+  //       ..addListener(_aoMudarCiclo);
 
   /// Uma chave por gráfico, para rolar a tela até ele.
   final _chaves = {for (final g in CicloGrafico.values) g: GlobalKey()};
+
+  var cont = 0;
 
   void _aoMudarCiclo() {
     if (mounted) setState(() {});
@@ -101,7 +107,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final lixeiras = MockDataService.instance.lixeiras;
+    final providerWatch = context.watch<LixeiraProvider>();
+    final providerRead = context.read<LixeiraProvider>();
+    final providerReadUsuario = context.read<AuthProvider>();
+    final providerWatchUsuario = context.watch<AuthProvider>();
+
+    if(cont == 0) {
+      _ciclo = CicloController(snapshot: CicloService.montarSnapshot(providerWatchUsuario, providerWatch))..addListener(_aoMudarCiclo);
+    }
+
+    cont = 1;
+
+    final lixeiras = providerWatch.lixeiras;
+    final coletores = providerWatchUsuario.coletores;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
@@ -166,14 +184,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           accentColor: AppColors.green,
                         ),
                         const SizedBox(height: 16),
-                        _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras)),
+                        _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras, coletores: coletores)),
                         const SizedBox(height: 16),
                         sidebar,
                         const SizedBox(height: 16),
                         _DashboardConteudo(
                           secao: _secao,
                           lixeiras: lixeiras,
+                          coletores: coletores,
                           frame: _frame,
+                          usuario: providerWatchUsuario.usuario,
+                          history: providerWatchUsuario.organizacao['history']
                         ),
                       ],
                     ),
@@ -189,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     // Faixa de KPIs sempre visível
-                    _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras)),
+                    _frame(CicloGrafico.kpis, _StatsRow(lixeiras: lixeiras, coletores: coletores)),
                     const SizedBox(height: 16),
                     // Corpo principal
                     Expanded(
@@ -203,7 +224,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: _DashboardConteudo(
                                 secao: _secao,
                                 lixeiras: lixeiras,
+                                coletores: coletores,
                                 frame: _frame,
+                                usuario: providerWatchUsuario.usuario,
+                                history: providerWatchUsuario.organizacao['history']
                               ),
                             ),
                           ),
@@ -338,27 +362,24 @@ class _CornerArcPainter extends CustomPainter {
 // FAIXA DE KPIs
 // ═══════════════════════════════════════════════════════════════════════════
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.lixeiras});
+  const _StatsRow({
+    required this.lixeiras,
+    required this.coletores
+  });
 
   final List<LixeiraModel> lixeiras;
+  final List<UsuarioModel> coletores;
 
   @override
   Widget build(BuildContext context) {
-    final ocupacaoMedia = lixeiras.isEmpty
-        ? 0
-        : (lixeiras.map((l) => l.statusLixeira.codigo + 1).reduce((a, b) => a + b) /
-                lixeiras.length /
-                5 *
-                100)
-            .round();
+    final ocupacaoMedia = lixeiras.isEmpty ? 0 : (lixeiras.map((l) => l.quantidadeResiduo).reduce((a, b) => a + b) / (lixeiras.length * 120) * 100).round();
 
-    final totalColetas = MockDataService.coletores
-        .fold<int>(0, (t, c) => t + c.coletasRealizadas);
+    final totalColetas = coletores.fold<int>(0, (t, c) => t + c.coletasRealizadas);
 
     final stats = [
       (icon: Icons.delete_rounded, cor: AppColors.green, label: 'Lixeiras', valor: '${lixeiras.length}'),
       (icon: Icons.speed_rounded, cor: AppColors.orange, label: 'Ocupação média', valor: '$ocupacaoMedia%'),
-      (icon: Icons.groups_rounded, cor: AppColors.dark, label: 'Coletores', valor: '${MockDataService.coletores.length}'),
+      (icon: Icons.groups_rounded, cor: AppColors.dark, label: 'Coletores', valor: '${coletores.length}'),
       (icon: Icons.local_shipping_rounded, cor: AppColors.green, label: 'Coletas / semana', valor: '$totalColetas'),
     ];
 
@@ -636,10 +657,16 @@ class _DashboardConteudo extends StatelessWidget {
     required this.secao,
     required this.lixeiras,
     required this.frame,
+    required this.coletores,
+    required this.usuario,
+    required this.history
   });
 
   final _DashboardSecao secao;
   final List<LixeiraModel> lixeiras;
+  final List<UsuarioModel> coletores;
+  final UsuarioModel? usuario;
+  final List<dynamic> history;
 
   /// Liga cada gráfico ao Ciclo (destaque + botão "Perguntar ao Ciclo").
   final Widget Function(CicloGrafico, Widget) frame;
@@ -657,8 +684,8 @@ class _DashboardConteudo extends StatelessWidget {
               barras: [
                 for (final l in lixeiras)
                   _BarraDado(
-                    valor: (l.statusLixeira.codigo + 1) / 5,
-                    rotulo: l.nome.split(' ').last,
+                    valor: l.quantidadeResiduo / 120,
+                    rotulo: l.nomeLixeira.split(' ').last,
                     label: l.statusLixeira.label,
                   ),
               ],
@@ -680,10 +707,15 @@ class _DashboardConteudo extends StatelessWidget {
         );
 
       case _DashboardSecao.coletores:
-        final coletores = MockDataService.coletores;
-        final maxColetas = coletores
-            .map((c) => c.coletasRealizadas)
-            .reduce((a, b) => a > b ? a : b);
+        var maxColetas;
+
+        if(coletores.isEmpty) {
+          maxColetas = 1;
+        }
+        else {
+          maxColetas = max(coletores.map((c) => c.coletasRealizadas).reduce((a, b) => a > b ? a : b), 1);
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -696,8 +728,8 @@ class _DashboardConteudo extends StatelessWidget {
               barras: [
                 for (final c in coletores)
                   _BarraDado(
-                    valor: c.coletasRealizadas / maxColetas,
-                    rotulo: c.nome.split(' ').first,
+                    valor: c.coletasRealizadas / (maxColetas > 0 ? maxColetas : 1),
+                    rotulo: c.nomeUsuario.split(' ').first,
                     label: '${c.coletasRealizadas} coletas',
                   ),
               ],
@@ -718,13 +750,8 @@ class _DashboardConteudo extends StatelessWidget {
         );
 
       case _DashboardSecao.outras:
-        final ocupacaoMedia = lixeiras.isEmpty
-            ? 0
-            : (lixeiras.map((l) => l.statusLixeira.codigo + 1).reduce((a, b) => a + b) /
-                    lixeiras.length /
-                    5 *
-                    100)
-                .round();
+        final ocupacaoMedia = lixeiras.isEmpty ? 0 : (lixeiras.map((l) => l.quantidadeResiduo).reduce((a, b) => a + b) / (lixeiras.length * 120) * 100).round();
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -744,7 +771,7 @@ class _DashboardConteudo extends StatelessWidget {
                   child: _IndicadorCard(
                     icon: Icons.groups_rounded,
                     titulo: 'Coletores ativos',
-                    valor: '${MockDataService.coletores.length}',
+                    valor: '${coletores.length}',
                     detalhe: 'na equipe atual',
                     cor: AppColors.dark,
                   ),
@@ -757,9 +784,9 @@ class _DashboardConteudo extends StatelessWidget {
                 Expanded(
                   child: _IndicadorCard(
                     icon: Icons.location_city_rounded,
-                    titulo: 'Instituições',
-                    valor: '${lixeiras.map((l) => l.codigoDonoLixeira).toSet().length}',
-                    detalhe: 'atendidas atualmente',
+                    titulo: 'Nome da Instituição',
+                    valor: usuario?.instituicao ?? "Não informado",
+                    detalhe: 'atendida atualmente',
                     cor: AppColors.green,
                   ),
                 ),
@@ -768,7 +795,7 @@ class _DashboardConteudo extends StatelessWidget {
                   child: _IndicadorCard(
                     icon: Icons.recycling_rounded,
                     titulo: 'Reciclagem estimada',
-                    valor: '${(lixeiras.length * 48)}kg',
+                    valor: '${(lixeiras.length * 120)} itens',
                     detalhe: 'esta semana',
                     cor: AppColors.orange,
                   ),
@@ -776,7 +803,9 @@ class _DashboardConteudo extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            frame(CicloGrafico.atividades, const _AtividadesCard()),
+            frame(CicloGrafico.atividades, _AtividadesCard(
+              history: history,
+            )),
           ],
         );
     }
@@ -951,8 +980,7 @@ class _BarraAnimada extends StatefulWidget {
   State<_BarraAnimada> createState() => _BarraAnimadaState();
 }
 
-class _BarraAnimadaState extends State<_BarraAnimada>
-    with SingleTickerProviderStateMixin {
+class _BarraAnimadaState extends State<_BarraAnimada> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
 
@@ -990,7 +1018,7 @@ class _BarraAnimadaState extends State<_BarraAnimada>
 
       return AnimatedBuilder(
         animation: _anim,
-        builder: (_, __) {
+        builder: (_, _) {
           final barH = (maxBarH * widget.dado.valor * _anim.value).clamp(2.0, maxBarH);
           return Column(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -1213,7 +1241,7 @@ class _RosquinhaPainter extends CustomPainter {
 class _RankingColetoresCard extends StatelessWidget {
   const _RankingColetoresCard({required this.coletores});
 
-  final List<ColetorModel> coletores;
+  final List<UsuarioModel> coletores;
 
   @override
   Widget build(BuildContext context) {
@@ -1243,7 +1271,7 @@ class _RankingColetoresCard extends StatelessWidget {
           for (int i = 0; i < sorted.length; i++) ...[
             _RankingItem(
               posicao: i + 1,
-              nome: sorted[i].nome,
+              nome: sorted[i].nomeUsuario,
               coletas: sorted[i].coletasRealizadas,
               maxColetas: sorted.first.coletasRealizadas,
             ),
@@ -1328,17 +1356,75 @@ class _RankingItem extends StatelessWidget {
 // CARD DE ATIVIDADES RECENTES (seção "Outras métricas")
 // ═══════════════════════════════════════════════════════════════════════════
 class _AtividadesCard extends StatelessWidget {
-  const _AtividadesCard();
+  const _AtividadesCard({
+    required this.history
+  });
 
-  static const _atividades = [
-    (icon: Icons.check_circle_rounded, cor: AppColors.green, texto: 'Lixeira Central coletada', tempo: 'Há 2h'),
-    (icon: Icons.warning_rounded, cor: AppColors.orange, texto: 'Lixeira Campus Norte: nível alto', tempo: 'Há 4h'),
-    (icon: Icons.add_circle_rounded, cor: AppColors.dark, texto: 'Nova lixeira cadastrada', tempo: 'Há 1d'),
-    (icon: Icons.recycling_rounded, cor: AppColors.green, texto: 'Coleta do Terminal concluída', tempo: 'Há 1d'),
-  ];
+  final List<dynamic> history;
+
+  // static const _atividades = [
+  //   (icon: Icons.check_circle_rounded, cor: AppColors.green, texto: 'Lixeira Central coletada', tempo: 'Há 2h'),
+  //   (icon: Icons.warning_rounded, cor: AppColors.orange, texto: 'Lixeira Campus Norte: nível alto', tempo: 'Há 4h'),
+  //   (icon: Icons.add_circle_rounded, cor: AppColors.dark, texto: 'Nova lixeira cadastrada', tempo: 'Há 1d'),
+  //   (icon: Icons.recycling_rounded, cor: AppColors.green, texto: 'Coleta do Terminal concluída', tempo: 'Há 1d'),
+  // ];
+
+  static final _atividades = [];
+
+  String calcularDiferenca(String dataInformada) {
+    final partes = dataInformada.split(', ');
+    final data = partes[0].split('/');
+    final horario = partes[1].split(':');
+
+    final dataUsuario = DateTime(
+      int.parse(data[2]), // Ano
+      int.parse(data[1]), // Mês
+      int.parse(data[0]), // Dia
+      int.parse(horario[0]), // Hora
+      int.parse(horario[1]), // Minuto
+    );
+
+    final dataAtual = DateTime.now();
+    final diferenca = dataAtual.difference(dataUsuario);
+
+    final horas = diferenca.inHours;
+    final dias = diferenca.inDays;
+
+    if (horas < 24) {
+      return 'Há ${horas}h';
+    } else {
+      return 'Há {$dias}d';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+
+    if(history.isNotEmpty) {
+      for(int i = 0; i < history.length; i++) {
+        final dynamic thisObject = history[i];
+
+        if(thisObject['action_object'].contains("mudou de status para \"Cheia\"")) {
+          _atividades.add((icon: Icons.warning_rounded, cor: AppColors.orangeDark, texto: thisObject['action_object'], tempo: calcularDiferenca(thisObject['time_action_object'])));
+        }
+        else if(thisObject['action_object'].contains("mudou de status para")) {
+          _atividades.add((icon: Icons.change_circle, cor: AppColors.orangeLight, texto: thisObject['action_object'], tempo: calcularDiferenca(thisObject['time_action_object'])));
+        }
+        else if(thisObject['action_object'].contains("mudou o status")) {
+          _atividades.add((icon: Icons.recycling_rounded, cor: AppColors.green, texto: thisObject['action_object'], tempo: calcularDiferenca(thisObject['time_action_object'])));
+        }
+        else if(thisObject['action_object'].contains("adicionada") || thisObject['action_object'].contains("adicionado")) {
+          _atividades.add((icon: Icons.add_circle_rounded, cor: AppColors.dark, texto: thisObject['action_object'], tempo: calcularDiferenca(thisObject['time_action_object'])));
+        }
+        else if(thisObject['action_object'].contains("removido") || thisObject['action_object'].contains("removida")) {
+          _atividades.add((icon: Icons.do_not_disturb_on, cor: AppColors.dark, texto: thisObject['action_object'], tempo: calcularDiferenca(thisObject['time_action_object'])));
+        }
+        else {
+          _atividades.add((icon: Icons.check_circle_rounded, cor: AppColors.green, texto: thisObject['action_object'], tempo: calcularDiferenca(thisObject['time_action_object'])));
+        }
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(

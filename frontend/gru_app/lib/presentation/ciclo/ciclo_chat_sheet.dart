@@ -116,7 +116,7 @@ class _CicloChatState extends State<_CicloChat> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   itemCount: _sugestoes.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (_, i) => ActionChip(
                     label: Text(_sugestoes[i]),
                     labelStyle: const TextStyle(
@@ -401,7 +401,7 @@ class _DigitandoState extends State<_Digitando>
             ),
             child: AnimatedBuilder(
               animation: _c,
-              builder: (_, __) => Row(
+              builder: (_, _) => Row(
                 children: [
                   for (int i = 0; i < 3; i++)
                     Container(

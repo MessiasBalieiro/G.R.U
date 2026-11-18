@@ -1,4 +1,4 @@
-/// Espelha o enum `tipo_residuo` do backend (`residue.model.js`).
+// / Espelha o enum `tipo_residuo` do backend (`residue.model.js`).
 enum TipoResiduo {
   plastico('Plástico'),
   vidro('Vidro'),

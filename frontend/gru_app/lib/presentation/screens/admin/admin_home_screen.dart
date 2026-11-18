@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/lixeira_provider.dart';
+import 'package:gru_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../data/services/mock_data_service.dart';
-import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/gru_scaffold.dart';
 import '../../widgets/home_greeting.dart';
@@ -15,19 +16,22 @@ class AdminHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = SessionService.instance.usuario!;
-    final db = MockDataService.instance;
+    final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    final providerWatchUsuario = context.watch<AuthProvider>();
+
+    final usuario = providerWatchUsuario.usuario;
 
     return ListenableBuilder(
-      listenable: db,
+      listenable: providerWatchUsuario,
       builder: (context, _) {
-        final instId = usuario.instituicaoPrincipalId;
-        final inst = instId == null ? null : db.instituicaoPorId(instId);
-        final lixeiras = db.lixeirasDasInstituicoes(usuario.instituicaoIds);
-        final prioritarias = lixeiras.where((l) => l.status.codigo >= 3).length;
-        final vinculados =
-            instId == null ? 0 : db.coletoresDaInstituicao(instId).length;
-        final pendentes = db.coletoresSemVinculo().length;
+        final inst = usuario?.instituicao;
+        final lixeiras = providerWatch.lixeiras;
+        final prioritarias = lixeiras.where((l) => l.statusLixeira.codigo >= 3).length;
+        final vinculados = providerWatchUsuario.coletores.length;
+
+        // final pendentes = db.coletoresSemVinculo().length;
 
         return GruScaffold(
           title: 'Home',
@@ -38,9 +42,9 @@ class AdminHomeScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 150),
             children: [
               HomeGreeting(
-                nome: usuario.primeiroNome,
+                nome: usuario?.instituicao ?? "",
                 papel: 'Administrador',
-                detalhe: inst?.nome ?? 'Sem instituição',
+                detalhe: inst ?? 'Sem instituição',
               ),
               const SizedBox(height: 24),
               LiquidCard(
@@ -65,8 +69,7 @@ class AdminHomeScreen extends StatelessWidget {
               LiquidCard(
                 icon: Icons.groups_rounded,
                 title: 'Coletores',
-                subtitle: '$vinculados vinculados'
-                    '${pendentes > 0 ? ' · $pendentes aguardando vínculo' : ''}',
+                subtitle: '$vinculados vinculados',
                 color: AppColors.green,
                 onTap: () =>
                     Navigator.of(context).pushNamed(AppRoutes.adminColetores),

@@ -1,19 +1,22 @@
-import residueRoutes from './residue.route.js'
-import trashRoutes from './trash.route.js'
-import userRoutes from './user.route.js'
-import cicloRoutes from './ciclo.route.js'
-import { Router } from 'express'
+import { Router } from 'express';
+import userRoutes from './User.routes.js';
+import trashRoutes from './Trash.routes.js';
+import residueRoutes from './Residue.routes.js';
+import organizationRoutes from './Organization.routes.js';
+import cicloRoutes from './ciclo.route.js';
 
-const routes = Router()
+const router = Router();
 
-routes.get("/", (req, res) => {
-    res.send("Olá!")
+router.get('/', (req, res) => {
+    res.send('Olá, Mundo!');
+    console.log('Olá, Mundo!');
 })
 
 export default (app) => {
-    app.use("/residues", residueRoutes)
-    app.use("/trashes", trashRoutes)
-    app.use("/users", userRoutes)
-    app.use("/ciclo", cicloRoutes)
-    app.use(routes)
-}
+    app.use(router);
+    app.use('/users', userRoutes);
+    app.use('/trashes', trashRoutes);
+    app.use('/residues', residueRoutes);
+    app.use('/organizations', organizationRoutes);
+    app.use('/ciclo', cicloRoutes);
+};

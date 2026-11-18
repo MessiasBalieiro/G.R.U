@@ -2,9 +2,20 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_strings.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_routes.dart';
+import '../providers/auth_provider.dart';
+import '../providers/lixeira_provider.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const GruApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LixeiraProvider()),
+        ChangeNotifierProvider(create: (context) => AuthProvider(context.read<LixeiraProvider>())),
+      ],
+      child: const GruApp()
+    )
+  );
 }
 
 /// App raiz do G.R.U (Gerenciador de Resíduos Urbanos).

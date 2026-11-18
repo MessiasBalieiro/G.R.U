@@ -1,4 +1,5 @@
-import '../models/lixeira_model.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../services/mock_data_service.dart';
 
 /// Repositório de Lixeiras.
@@ -7,21 +8,49 @@ import '../services/mock_data_service.dart';
 /// `POST /trashes` e `GET /trashes/:id`, basta trocar a implementação
 /// dos métodos abaixo para chamadas HTTP - as telas não precisam mudar.
 class LixeiraRepository {
-  Future<List<LixeiraModel>> listar({String? termoBusca}) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final todas = MockDataService.instance.lixeiras;
-    if (termoBusca == null || termoBusca.trim().isEmpty) return todas;
+  Future<dynamic> listar({required String codigoDonoLixeira}) async {
+    // final todas = MockDataService.instance.lixeiras;
+    final url = Uri.parse("https://backend-gru.vercel.app/trashes/all-trashes-by-user?userId=$codigoDonoLixeira");
 
-    final termo = termoBusca.toLowerCase();
-    return todas
-        .where((l) =>
-            l.nome.toLowerCase().contains(termo) ||
-            (l.id ?? '').toLowerCase().contains(termo))
-        .toList();
+    final resposta = await http.get(url);
+
+    if (resposta.statusCode == 200 && resposta.body.isNotEmpty) {
+      final dados = jsonDecode(resposta.body);
+      return dados;
+    } 
+    else if (resposta.statusCode == 200 && resposta.body.isEmpty) {
+      return null;
+    } 
+    else {
+      throw Exception('Falha ao buscar lixeiras do usuário');
+    }
   }
 
-  Future<void> cadastrar(LixeiraModel lixeira) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    MockDataService.instance.adicionarLixeira(lixeira);
+  Future<dynamic> cadastrar(String cpfContratante, String nomeContratante, String nomeLixeira, String enderecoLixeira, String coordenada, String idOrg) async {
+    final url = Uri.parse("https://backend-gru.vercel.app/organizations/add-trash?rl=ADMINISTRADOR");
+
+    final resposta = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: jsonEncode({
+        'cpf_contratante': cpfContratante,
+        'nome_contratante': nomeContratante,
+        'nome_lixeira': nomeLixeira,
+        'endereco_lixeira': enderecoLixeira,
+        'coordenada': coordenada,
+        'status_lixeira': 0,
+        'idOrg': idOrg
+      })
+    );
+
+    if (resposta.statusCode == 201 || resposta.statusCode == 200) {
+      return jsonDecode(resposta.body);
+    } 
+    else {
+      throw Exception('Falha ao cadastrar lixeira');
+    }
   }
 }
