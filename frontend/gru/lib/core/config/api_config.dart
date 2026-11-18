@@ -14,7 +14,7 @@ class ApiConfig {
   );
 
   /// E-mail da equipe que recebe as perguntas do formulário da Home.
-  static const String contatoEmail = 'gru_equipe@gmail.com';
+  static const String contatoEmail = 'gru.equipe.atendimento@gmail.com';
 
   /// Serviço gratuito (FormSubmit) que encaminha o formulário por e-mail,
   /// sem precisar de backend. Exige confirmar o e-mail uma única vez.
