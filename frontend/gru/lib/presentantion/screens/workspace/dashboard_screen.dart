@@ -204,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           accentColor: AppColors.green,
                         ),
                         const SizedBox(height: 16),
-                        if (providerWatchUsuario.modoDemo) ...[
+                        if (providerWatchUsuario.usandoDadosExemplo) ...[
                           const AvisoModoDemo(),
                           const SizedBox(height: 12),
                         ],
@@ -237,7 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       accentColor: AppColors.green,
                     ),
                     const SizedBox(height: 16),
-                    if (providerWatchUsuario.modoDemo) ...[
+                    if (providerWatchUsuario.usandoDadosExemplo) ...[
                       const AvisoModoDemo(),
                       const SizedBox(height: 12),
                     ],

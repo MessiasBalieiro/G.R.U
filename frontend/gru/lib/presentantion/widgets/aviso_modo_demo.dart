@@ -2,39 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
-import '../../routes/app_routes.dart';
 
-/// Faixa que avisa que os dados são de exemplo (modo demonstração).
+/// Faixa exibida quando o servidor falhou e a tela usa dados de exemplo.
 class AvisoModoDemo extends StatelessWidget {
   const AvisoModoDemo({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.green.withValues(alpha: 0.10),
+        color: AppColors.orange.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.green.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.orange.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.science_rounded, color: AppColors.green),
+          const Icon(Icons.cloud_off_rounded, color: AppColors.orange),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              'Modo demonstração: dados de exemplo, nada é salvo no servidor.',
+              'Servidor indisponível: mostrando dados de exemplo. '
+              'Cadastros ficam desativados até a conexão voltar.',
               style: TextStyle(fontSize: 13, color: AppColors.dark),
             ),
           ),
-          TextButton(
-            onPressed: () {
-              context.read<AuthProvider>().logout();
-              Navigator.of(context)
-                  .pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
-            },
-            child: const Text('Sair da demo'),
-          ),
+          if (auth.carregandoConta)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.orange),
+            )
+          else
+            TextButton(
+              onPressed: () => context.read<AuthProvider>().carregarConta(),
+              child: const Text('Tentar de novo'),
+            ),
         ],
       ),
     );
@@ -42,12 +47,13 @@ class AvisoModoDemo extends StatelessWidget {
 }
 
 /// Avisa (e retorna `true`) quando uma ação que grava no servidor é tentada
-/// no modo demonstração.
+/// enquanto a tela mostra dados de exemplo.
 bool bloquearNaDemo(BuildContext context) {
-  if (!context.read<AuthProvider>().modoDemo) return false;
+  if (!context.read<AuthProvider>().usandoDadosExemplo) return false;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(const SnackBar(
-        content: Text('No modo demonstração os cadastros não são salvos.')));
+        content: Text(
+            'Servidor indisponível: não é possível salvar agora. Tente de novo em instantes.')));
   return true;
 }
