@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/models/usuario_model.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/animated_svg_wave.dart';
@@ -24,6 +23,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final _nomeCtrl = TextEditingController();
   final _senhaCtrl = TextEditingController();
   final _instCtrl = TextEditingController();
+  final _telCtrl = TextEditingController();
+  final _cpfCtrl = TextEditingController();
   final _repository = UsuarioRepository();
   bool _carregando = false;
 
@@ -33,6 +34,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
     _nomeCtrl.dispose();
     _senhaCtrl.dispose();
     _instCtrl.dispose();
+    _telCtrl.dispose();
+    _cpfCtrl.dispose();
     super.dispose();
   }
 
@@ -42,17 +45,10 @@ class _CadastroScreenState extends State<CadastroScreen> {
   Future<void> _cadastrar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _carregando = true);
-    final ok = await _repository.cadastrar(UsuarioModel(
-      nomeUsuario: _nomeCtrl.text.trim(),
-      emailUsuario: _emailCtrl.text.trim(),
-      telefoneUsuario: '',
-      cpfUsuario: '',
-      senhaUsuario: _senhaCtrl.text,
-      instituicao: _instCtrl.text.trim(),
-    ));
+    final ok = await _repository.cadastrar(nome: _nomeCtrl.text.trim(), email: _emailCtrl.text.trim(), telefone: _telCtrl.text.trim(), cpf: _cpfCtrl.text.trim(), senha: _senhaCtrl.text, instituicao: _instCtrl.text.trim());
     if (!mounted) return;
     setState(() => _carregando = false);
-    if (ok) {
+    if (ok != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cadastro realizado! Faça login.')),
       );
@@ -143,6 +139,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
                           nomeCtrl: _nomeCtrl,
                           senhaCtrl: _senhaCtrl,
                           instCtrl: _instCtrl,
+                          telCtrl: _telCtrl,
+                          cpfCtrl: _cpfCtrl,
                           carregando: _carregando,
                           req: _req,
                           onSubmit: _cadastrar,
@@ -167,13 +165,15 @@ class _DesktopCadastro extends StatelessWidget {
     required this.nomeCtrl,
     required this.senhaCtrl,
     required this.instCtrl,
+    required this.telCtrl,
+    required this.cpfCtrl,
     required this.carregando,
     required this.req,
     required this.onSubmit,
   });
 
   final GlobalKey<FormState> formKey;
-  final TextEditingController emailCtrl, nomeCtrl, senhaCtrl, instCtrl;
+  final TextEditingController emailCtrl, nomeCtrl, senhaCtrl, instCtrl, telCtrl, cpfCtrl;
   final bool carregando;
   final String? Function(String?, String) req;
   final VoidCallback onSubmit;
@@ -226,6 +226,18 @@ class _DesktopCadastro extends StatelessWidget {
                             label: 'Nome',
                             controller: nomeCtrl,
                             validator: (v) => req(v, 'seu nome')),
+                        const SizedBox(height: 10),
+                        LabeledTextField(
+                            label: 'Telefone',
+                            controller: telCtrl,
+                            keyboardType: TextInputType.phone,
+                            validator: (v) => req(v, 'seu telefone')),
+                        const SizedBox(height: 10),
+                        LabeledTextField(
+                            label: 'CPF',
+                            controller: cpfCtrl,
+                            keyboardType: TextInputType.number,
+                            validator: (v) => req(v, 'seu CPF')),
                         const SizedBox(height: 10),
                         LabeledTextField(
                             label: 'Senha',

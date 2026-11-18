@@ -1,4 +1,4 @@
-import cicloController from "../controllers/ciclo.controller.js";
+import cicloController from "../Controllers/Ciclo.controller.js";
 import { Router } from "express";
 
 const cicloRoutes = Router();

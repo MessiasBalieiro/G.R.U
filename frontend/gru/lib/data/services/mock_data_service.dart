@@ -10,6 +10,7 @@ import '../models/relatorio_model.dart';
 /// Quando os endpoints reais existirem, troque as implementações dos
 /// repositórios em `data/repositories` para chamar a API via `http`,
 /// mantendo a mesma assinatura de métodos usada pelas telas.
+
 class MockDataService {
   MockDataService._();
   static final MockDataService instance = MockDataService._();
@@ -17,30 +18,30 @@ class MockDataService {
   final List<LixeiraModel> _lixeiras = [
     const LixeiraModel(
       id: '1',
-      nome: 'Lixeira Praça Central',
+      nomeLixeira: 'Lixeira Praça Central',
       codigoDonoLixeira: 'INST-001',
       enderecoLixeira: 'Praça Central, 100',
       coordenada: '-23.5505,-46.6333',
+      quantidadeResiduo: 50,
       statusLixeira: StatusLixeira.media,
-      outrasInformacoes: 'Coleta seletiva - plástico e papel',
     ),
     const LixeiraModel(
       id: '2',
-      nome: 'Lixeira Campus Norte',
+      nomeLixeira: 'Lixeira Campus Norte',
       codigoDonoLixeira: 'INST-001',
       enderecoLixeira: 'Av. Universitária, 500',
       coordenada: '-23.5605,-46.6433',
+      quantidadeResiduo: 80,
       statusLixeira: StatusLixeira.cheia,
-      outrasInformacoes: 'Coleta seletiva - vidro e metal',
     ),
     const LixeiraModel(
       id: '3',
-      nome: 'Lixeira Terminal Rodoviário',
+      nomeLixeira: 'Lixeira Terminal Rodoviário',
       codigoDonoLixeira: 'INST-002',
       enderecoLixeira: 'Terminal Rodoviário, Portão 3',
       coordenada: '-23.5705,-46.6533',
+      quantidadeResiduo: 20,
       statusLixeira: StatusLixeira.baixa,
-      outrasInformacoes: 'Coleta geral',
     ),
   ];
 

@@ -1,8 +1,160 @@
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 
+// import '../../../core/utils/validators.dart';
+// import '../../../data/repositories/usuario_repository.dart';
+// import '../../../data/services/session_service.dart';
+// import '../../../routes/app_routes.dart';
+// import '../../widgets/gru_button.dart';
+// import '../../widgets/gru_mascot.dart';
+// import 'auth_background.dart';
+// import '../../widgets/gru_text_field.dart';
+// import '../../widgets/social_login_row.dart';
+
+// /// "Tela Login": fundo verde, Email, Senha, login social e botão Login.
+// /// O tipo de usuário (Administrador/Coletor) vem da conta e define a Home.
+// class LoginScreen extends StatefulWidget {
+//   const LoginScreen({super.key});
+
+//   @override
+//   State<LoginScreen> createState() => _LoginScreenState();
+// }
+
+// class _LoginScreenState extends State<LoginScreen> {
+//   final _formKey = GlobalKey<FormState>();
+//   final _email = TextEditingController();
+//   final _senha = TextEditingController();
+//   final _repo = UsuarioRepository();
+//   bool _carregando = false;
+
+//   @override
+//   void dispose() {
+//     _email.dispose();
+//     _senha.dispose();
+//     super.dispose();
+//   }
+
+//   Future<void> _entrar() async {
+//     FocusScope.of(context).unfocus();
+//     if (!_formKey.currentState!.validate()) return;
+//     setState(() => _carregando = true);
+//     try {
+//       final u = await _repo.login(email: _email.text, senha: _senha.text);
+//       if (!mounted) return;
+//       SessionService.instance.entrar(u);
+//       Navigator.of(context)
+//           .pushNamedAndRemoveUntil(AppRoutes.homePara(u.tipo), (_) => false);
+//     } on AuthException catch (e) {
+//       if (!mounted) return;
+//       setState(() => _carregando = false);
+//       ScaffoldMessenger.of(context)
+//           .showSnackBar(SnackBar(content: Text(e.mensagem)));
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return AuthBlobBackground.login(
+//       child: Form(
+//         key: _formKey,
+//         child: CustomScrollView(
+//           slivers: [
+//             SliverFillRemaining(
+//               hasScrollBody: false,
+//               child: Padding(
+//                 padding: const EdgeInsets.fromLTRB(8, 8, 24, 24),
+//                 child: Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     Row(
+//                       children: [
+//                         IconButton(
+//                           onPressed: () => Navigator.maybePop(context),
+//                           icon: const Icon(Icons.arrow_back_ios_new_rounded,
+//                               size: 18, color: Colors.white),
+//                         ),
+//                         const GruMascot(size: 48),
+//                       ],
+//                     ),
+//                     SizedBox(height: MediaQuery.sizeOf(context).height * 0.07),
+//                     Padding(
+//                       padding: const EdgeInsets.only(left: 16),
+//                       child: Column(
+//                         crossAxisAlignment: CrossAxisAlignment.start,
+//                         children: [
+//                           GruTextField(
+//                             label: 'Email',
+//                             controller: _email,
+//                             keyboardType: TextInputType.emailAddress,
+//                             validator: Validators.email,
+//                           ),
+//                           const SizedBox(height: 18),
+//                           GruTextField(
+//                             label: 'Senha',
+//                             controller: _senha,
+//                             obscure: true,
+//                             textInputAction: TextInputAction.done,
+//                             onSubmitted: (_) => _entrar(),
+//                             validator: (v) =>
+//                                 Validators.obrigatorio(v, 'Senha'),
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                     // Empurra social + botão para a região da forma escura.
+//                     const Spacer(flex: 2),
+//                     Center(
+//                       child: Column(
+//                         children: [
+//                           const SocialLoginRow(),
+//                           const SizedBox(height: 28),
+//                           GruButton(
+//                             label: 'Login',
+//                             loading: _carregando,
+//                             onPressed: _entrar,
+//                           ),
+//                           const SizedBox(height: 12),
+//                           TextButton(
+//                             onPressed: () => Navigator.of(context)
+//                                 .pushReplacementNamed(AppRoutes.cadastro),
+//                             child: const Text(
+//                               'Não tem conta? Cadastre-se',
+//                               style: TextStyle(
+//                                 color: Colors.white,
+//                                 fontWeight: FontWeight.w700,
+//                               ),
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                     const Spacer(flex: 3),
+//                   ],
+//                 ),
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+
+
+
+
+
+
+import 'package:flutter/material.dart';
+import 'package:gru_app/data/repositories/lixeira_repository.dart';
+import 'package:provider/provider.dart';
 import '../../../core/utils/validators.dart';
+import '../../../data/models/usuario_model.dart';
 import '../../../data/repositories/usuario_repository.dart';
-import '../../../data/services/session_service.dart';
+import '../../../providers/lixeira_provider.dart';
+import '../../../providers/user_provider.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/gru_button.dart';
 import '../../widgets/gru_mascot.dart';
@@ -24,6 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _senha = TextEditingController();
   final _repo = UsuarioRepository();
+  final _repoLixeira = LixeiraRepository();
   bool _carregando = false;
 
   @override
@@ -34,20 +187,58 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _entrar() async {
+
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _carregando = true);
     try {
       final u = await _repo.login(email: _email.text, senha: _senha.text);
       if (!mounted) return;
-      SessionService.instance.entrar(u);
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil(AppRoutes.homePara(u.tipo), (_) => false);
-    } on AuthException catch (e) {
+      if(u != null) {
+
+        if(u['history'].length == 0) {
+          u['history'].add({
+            "vazio": 0
+          });
+        }
+
+        context.read<AuthProvider>().definirUsuario( UsuarioModel(id: u['_id'], nomeUsuario: u['nome_usuario'], emailUsuario: u['email_usuario'], telefoneUsuario: u['telefone_usuario'], cpfUsuario: u['cpf_usuario'], cargoUsuario: u['cargo_usuario'], instituicao: u['instituicao_usuario'], coletasRealizadas: u['coletas_realizadas'], history: u['history'], instituicoes: u['instituicoes']) );
+        context.read<AuthProvider>().definirOrganizacao(await _repo.buscarOrganizacao(idContratante: u['_id']));
+
+        u['instituicoes'].forEach((item) async => {
+          context.read<AuthProvider>().definirOrganizacoes(await _repo.buscarOrganizacoes(idOrganization: item))
+        });
+
+        if(context.read<AuthProvider>().organizacao != null) {
+          if(context.read<AuthProvider>().organizacao['colectors'].length > 0) {
+            context.read<AuthProvider>().definirColetores(await _repo.buscarColetores(ids: context.read<AuthProvider>().organizacao['colectors']));
+            print("Aqui foi");
+          }
+
+          if(context.read<AuthProvider>().organizacao['trashes'].length > 0) {
+            context.read<LixeiraProvider>().definirLixeiras(await _repoLixeira.listar(codigoDonoLixeira: u['_id']));
+            print("Aqui também");
+          }
+        }
+        else if(u['instituicoes'].length > 0) {
+          context.read<AuthProvider>().organizacoes.forEach((item) async {
+            print(item);
+            context.read<LixeiraProvider>().definirLixeiras(await _repoLixeira.listar(codigoDonoLixeira: item['id_contratante']));
+          });
+
+          print(u);
+          print(context.read<AuthProvider>().organizacoes);
+          print(u['instituicoes']);
+          print(context.read<LixeiraProvider>().lixeiras);
+        }
+
+        Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.homePara(u['cargo_usuario']), (_) => false);
+      }
+    } catch (e) {
       if (!mounted) return;
       setState(() => _carregando = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.mensagem)));
+      print(e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro ao efetuar o login")));
     }
   }
 
@@ -114,8 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 12),
                           TextButton(
-                            onPressed: () => Navigator.of(context)
-                                .pushReplacementNamed(AppRoutes.cadastro),
+                            onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.cadastro),
                             child: const Text(
                               'Não tem conta? Cadastre-se',
                               style: TextStyle(

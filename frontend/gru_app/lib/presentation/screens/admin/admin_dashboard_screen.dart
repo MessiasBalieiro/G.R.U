@@ -1,17 +1,16 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/lixeira_provider.dart';
+import 'package:gru_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/domain_styles.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../data/models/ciclo_model.dart';
 import '../../../data/models/lixeira_model.dart';
-import '../../../data/models/residuo_model.dart';
 import '../../../data/models/usuario_model.dart';
 import '../../../data/services/ciclo_service.dart';
-import '../../../data/services/mock_data_service.dart';
-import '../../../data/services/session_service.dart';
 import '../../ciclo/ciclo_chart_frame.dart';
 import '../../ciclo/ciclo_chat_sheet.dart';
 import '../../ciclo/ciclo_controller.dart';
@@ -36,9 +35,7 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  late final CicloController _ciclo = CicloController(
-    snapshot: () => CicloService.montarSnapshot(SessionService.instance.usuario!),
-  );
+  late final CicloController _ciclo;
 
   /// Uma chave por gráfico, para rolar a tela até ele.
   final _chaves = {for (final g in CicloGrafico.values) g: GlobalKey()};
@@ -47,6 +44,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void dispose() {
     _ciclo.dispose();
     super.dispose();
+  }
+
+  void _definirCicloService(AuthProvider provider, LixeiraProvider lixeiraProvider) {
+    _ciclo = CicloController(snapshot: () => CicloService.montarSnapshot(provider, lixeiraProvider));
   }
 
   Future<void> _abrirCiclo({String? pergunta}) async {
@@ -87,18 +88,77 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = SessionService.instance.usuario!;
-    final db = MockDataService.instance;
+    final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    final providerWatchUsuario = context.watch<AuthProvider>();
+    final List<({IconData icone, Color cor, String tempo, String texto})> history = [];
+
+      String calcularDiferenca(String dataInformada) {
+        final partes = dataInformada.split(', ');
+        final data = partes[0].split('/');
+        final horario = partes[1].split(':');
+
+        final dataUsuario = DateTime(
+          int.parse(data[2]), // Ano
+          int.parse(data[1]), // Mês
+          int.parse(data[0]), // Dia
+          int.parse(horario[0]), // Hora
+          int.parse(horario[1]), // Minuto
+        );
+
+        final dataAtual = DateTime.now();
+        final diferenca = dataAtual.difference(dataUsuario);
+
+        final horas = diferenca.inHours;
+        final dias = diferenca.inDays;
+
+        if (horas < 24) {
+          return 'Há ${horas}h';
+        } else {
+          return 'Há {$dias}d';
+        }
+      }
+
+    for (final v in providerWatchUsuario.organizacao['history']) {
+      if(v['action_object'].contains("mudou de status para \"Cheia\"")) {
+        history.add((icone: Icons.warning_rounded, cor: AppColors.orangeDark, tempo: calcularDiferenca(v['time_action_object']), texto: v['action_object']));
+      }
+      else if(v['action_object'].contains("mudou de status para")) {
+        history.add((icone: Icons.change_circle, cor: AppColors.orangeLight, texto: v['action_object'], tempo: calcularDiferenca(v['time_action_object'])));
+      }
+      else if(v['action_object'].contains("mudou o status")) {
+        history.add((icone: Icons.recycling_rounded, cor: AppColors.green, texto: v['action_object'], tempo: calcularDiferenca(v['time_action_object'])));
+      }
+      else if(v['action_object'].contains("adicionada") || v['action_object'].contains("adicionado")) {
+        history.add((icone: Icons.add_circle_rounded, cor: AppColors.dark, texto: v['action_object'], tempo: calcularDiferenca(v['time_action_object'])));
+      }
+      else if(v['action_object'].contains("removido") || v['action_object'].contains("removida")) {
+        history.add((icone: Icons.do_not_disturb_on, cor: AppColors.dark, texto: v['action_object'], tempo: calcularDiferenca(v['time_action_object'])));
+      }
+      else {
+        history.add((icone: Icons.check_circle_rounded, cor: AppColors.green, texto: v['action_object'], tempo: calcularDiferenca(v['time_action_object'])));
+      }
+    }
+    
+    _definirCicloService(providerWatchUsuario, providerWatch);
 
     return ListenableBuilder(
-      listenable: Listenable.merge([db, _ciclo]),
+      listenable: Listenable.merge([providerWatch, _ciclo]),
       builder: (context, _) {
-        final lixeiras = db.lixeirasDasInstituicoes(usuario.instituicaoIds);
-        final instId = usuario.instituicaoPrincipalId;
-        final ranking = instId == null
-            ? <({UsuarioModel coletor, int coletas})>[]
-            : db.ranking(instId);
-        final visitas = db.visitasDasInstituicoes(usuario.instituicaoIds);
+        final lixeiras = providerWatch.lixeiras;
+        final ranking = <({UsuarioModel coletor, int coletas})>[];
+        // final instId = usuario.instituicaoPrincipalId;
+        // final lista = <({UsuarioModel coletor, int coletas})>[];
+
+        for (final c in providerWatchUsuario.coletores) {
+          final n = c.coletasRealizadas;
+          ranking.add((coletor: c, coletas: n));
+        }
+
+        if(ranking.isNotEmpty) {
+          ranking.sort((a, b) => b.coletas.compareTo(a.coletas));
+        }
 
         if (lixeiras.isEmpty) {
           return const GruScaffold(
@@ -112,12 +172,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           );
         }
 
-        final ocupacaoMedia =
-            (lixeiras.map((l) => l.ocupacao).reduce((a, b) => a + b) /
-                    lixeiras.length)
-                .round();
-        final limite = DateTime.now().subtract(const Duration(days: 30));
-        final coletas30 = visitas.where((v) => v.dataHora.isAfter(limite)).length;
+        final ocupacaoMedia = (lixeiras.map((l) => l.quantidadeResiduo).reduce((a, b) => a + b) / lixeiras.length).round();
+        // final limite = DateTime.now().subtract(const Duration(days: 30));
+        // final coletas30 = providerWatchUsuario.coletores.where((v) => v.dataHora.isAfter(limite)).length;
 
         return GruScaffold(
           title: 'Dashboard',
@@ -175,7 +232,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       icon: Icons.warning_amber_rounded,
                       cor: AppColors.danger,
                       label: 'Para coletar',
-                      valor: '${lixeiras.where((l) => l.status.codigo >= 3).length}',
+                      valor: '${lixeiras.where((l) => l.statusLixeira.codigo >= 3).length}',
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -183,8 +240,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: _KpiCard(
                       icon: Icons.local_shipping_rounded,
                       cor: AppColors.dark,
-                      label: 'Coletas (30 dias)',
-                      valor: '$coletas30',
+                      label: 'Coletas',
+                      valor: providerWatchUsuario.coletores.map((l) => l.coletasRealizadas).reduce((a, b) => a + b).toString(),
                     ),
                   ),
                 ],
@@ -197,18 +254,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(height: 16),
               _frame(CicloGrafico.ranking, _RankingCard(ranking: [
                 for (final r in ranking)
-                  (nome: r.coletor.nome, coletas: r.coletas),
+                  (nome: r.coletor.nomeUsuario, coletas: r.coletas),
               ])),
               const SizedBox(height: 16),
               _frame(CicloGrafico.atividades, _AtividadesCard(
-                itens: [
-                  for (final v in visitas.take(5))
-                    (
-                      texto:
-                          '${v.coletorNome.split(' ').first} coletou ${v.lixeiraNomeCurto}',
-                      tempo: Fmt.relativo(v.dataHora),
-                    ),
-                ],
+                itens: history,
               )),
             ],
           ),
@@ -326,8 +376,8 @@ class _OcupacaoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ordenadas = [...lixeiras]
-      ..sort((a, b) => b.ocupacao.compareTo(a.ocupacao));
-    const alturaMax = 120.0;
+      ..sort((a, b) => b.quantidadeResiduo.compareTo(a.quantidadeResiduo));
+    const alturaMax = 120.0; 
 
     return WhiteCard(
       padding: const EdgeInsets.all(18),
@@ -349,7 +399,7 @@ class _OcupacaoCard extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('${l.ocupacao}%',
+                          Text('${((l.quantidadeResiduo * 100) / 120).round()}%',
                               style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
@@ -357,14 +407,14 @@ class _OcupacaoCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           TweenAnimationBuilder<double>(
                             tween: Tween<double>(
-                                begin: 0, end: l.ocupacao / 100),
+                                begin: 0, end: l.quantidadeResiduo / 120),
                             duration: const Duration(milliseconds: 700),
                             curve: Curves.easeOutCubic,
-                            builder: (_, v, __) => Container(
+                            builder: (_, v, _) => Container(
                               width: 26,
                               height: max(4.0, alturaMax * v),
                               decoration: BoxDecoration(
-                                color: corDoStatus(l.status),
+                                color: corDoStatus(l.statusLixeira),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
@@ -373,7 +423,7 @@ class _OcupacaoCard extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 3),
                             child: Text(
-                              l.nomeCurto,
+                              l.nomeLixeira,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
@@ -404,17 +454,17 @@ class _TiposResiduoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final soma = <TipoResiduo, double>{
-      for (final t in TipoResiduo.values) t: 0.0,
-    };
-    for (final l in lixeiras) {
-      l.composicao.forEach((tipo, pct) {
-        soma[tipo] = soma[tipo]! + l.ocupacao * pct / 100;
-      });
-    }
-    final total = soma.values.fold<double>(0, (a, b) => a + b);
+    final soma = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.quantidadeResiduo);
+    final somaPlastico = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantPlastico']!);
+    final somaVidro = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantVidro']!);
+    final somaMetal = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantMetal']!);
+    final somaPapel = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantPapel']!);
+
     final dados = [
-      for (final t in TipoResiduo.values) (tipo: t, valor: soma[t]!),
+      (cor: AppColors.orange, label: "Plástico", valor: somaPlastico),
+      (cor: AppColors.dark, label: "Metal", valor: somaMetal),
+      (cor: AppColors.green, label: "Vidro", valor: somaVidro),
+      (cor: AppColors.sky, label: "Papel", valor: somaPapel),
     ];
 
     return WhiteCard(
@@ -425,7 +475,7 @@ class _TiposResiduoCard extends StatelessWidget {
           const _CardTitulo(
               'Tipos de resíduo', 'Composição do que está nas lixeiras'),
           const SizedBox(height: 16),
-          if (total == 0)
+          if (soma == 0)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(
@@ -440,7 +490,7 @@ class _TiposResiduoCard extends StatelessWidget {
                   tween: Tween<double>(begin: 0, end: 1),
                   duration: const Duration(milliseconds: 900),
                   curve: Curves.easeOutCubic,
-                  builder: (_, v, __) => SizedBox(
+                  builder: (_, v, _) => SizedBox(
                     width: 130,
                     height: 130,
                     child: CustomPaint(
@@ -448,7 +498,9 @@ class _TiposResiduoCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 20),
+
                 Expanded(
                   child: Column(
                     children: [
@@ -461,19 +513,19 @@ class _TiposResiduoCard extends StatelessWidget {
                                 width: 10,
                                 height: 10,
                                 decoration: BoxDecoration(
-                                  color: d.tipo.cor,
+                                  color: d.cor,
                                   shape: BoxShape.circle,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(d.tipo.label,
+                                child: Text(d.label,
                                     style: const TextStyle(
                                         fontSize: 13,
                                         color: AppColors.dark)),
                               ),
                               Text(
-                                '${(d.valor / total * 100).round()}%',
+                                '${((d.valor * 100) / soma).round()}%',
                                 style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
@@ -496,7 +548,7 @@ class _TiposResiduoCard extends StatelessWidget {
 class _DonutPainter extends CustomPainter {
   const _DonutPainter({required this.dados, required this.progress});
 
-  final List<({TipoResiduo tipo, double valor})> dados;
+  final List<({Color cor, String label, int valor})> dados;
   final double progress;
 
   @override
@@ -522,7 +574,7 @@ class _DonutPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = stroke
-          ..color = d.tipo.cor,
+          ..color = d.cor,
       );
       inicio += sweep;
     }
@@ -636,7 +688,7 @@ class _RankingCard extends StatelessWidget {
 class _AtividadesCard extends StatelessWidget {
   const _AtividadesCard({required this.itens});
 
-  final List<({String texto, String tempo})> itens;
+  final List<({IconData icone, Color cor, String tempo, String texto})> itens;
 
   @override
   Widget build(BuildContext context) {
@@ -655,8 +707,8 @@ class _AtividadesCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: AppColors.green, size: 20),
+                  Icon(a.icone,
+                      color: a.cor, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(a.texto,

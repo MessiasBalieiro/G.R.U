@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_images.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/repositories/lixeira_repository.dart';
 import '../../../data/repositories/usuario_repository.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/animated_svg_wave.dart';
 import '../../widgets/gru_mascot.dart';
 import '../../widgets/labeled_text_field.dart';
 import '../../widgets/social_login_row.dart';
+import '../../../data/models/usuario_model.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/lixeira_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GUIA RÁPIDO: COMO MODIFICAR AS ONDAS SVG
@@ -41,6 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
   final _repository = UsuarioRepository();
+  final _repositoryLixeira = LixeiraRepository();
   bool _carregando = false;
 
   @override
@@ -59,9 +65,23 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (!mounted) return;
     setState(() => _carregando = false);
-    if (ok) {
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil(AppRoutes.areaTrabalho, (_) => false);
+    if (ok != null) {
+      context.read<AuthProvider>().definirUsuario( UsuarioModel(id: ok['_id'], nomeUsuario: ok['nome_usuario'], emailUsuario: ok['email_usuario'], telefoneUsuario: ok['telefone_usuario'], cpfUsuario: ok['cpf_usuario'], cargoUsuario: ok['cargo_usuario'], instituicao: ok['instituicao_usuario'], coletasRealizadas: ok['coletas_realizadas']) );
+      context.read<AuthProvider>().definirOrganizacao(await _repository.buscarOrganizacao(idContratante: ok['_id']));
+      
+      if(context.read<AuthProvider>().organizacao != null) {
+        if(context.read<AuthProvider>().organizacao['colectors'].length > 0) {
+          print("Aqui foi");
+          context.read<AuthProvider>().definirColetores(await _repository.buscarColetores(ids: context.read<AuthProvider>().organizacao['colectors']));
+        }
+
+        if(context.read<AuthProvider>().organizacao['trashes'].length > 0) {
+          print("Aqui também");
+          context.read<LixeiraProvider>().definirLixeiras(await _repositoryLixeira.listar(codigoDonoLixeira: ok['_id']));
+        }
+      }
+
+      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.areaTrabalho, (_) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preencha email e senha.')),

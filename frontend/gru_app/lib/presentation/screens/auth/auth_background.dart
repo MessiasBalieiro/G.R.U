@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../core/constants/app_images.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../widgets/animated_bottom_shape.dart';

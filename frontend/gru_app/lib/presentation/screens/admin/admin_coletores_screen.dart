@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/user_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../data/models/usuario_model.dart';
-import '../../../data/services/mock_data_service.dart';
-import '../../../data/services/session_service.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gru_scaffold.dart';
 import '../../widgets/white_card.dart';
@@ -16,22 +15,23 @@ class AdminColetoresScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = SessionService.instance.usuario!;
-    final db = MockDataService.instance;
-    final instId = usuario.instituicaoPrincipalId;
+    // final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    final providerWatchUsuario = context.watch<AuthProvider>();
+
+    final usuario = providerWatchUsuario.usuario;
 
     return ListenableBuilder(
-      listenable: db,
+      listenable: providerWatchUsuario,
       builder: (context, _) {
-        final vinculados =
-            instId == null ? <UsuarioModel>[] : db.coletoresDaInstituicao(instId);
-        final pendentes = db.coletoresSemVinculo();
-        final inst = instId == null ? null : db.instituicaoPorId(instId);
+        final vinculados = providerWatchUsuario.coletores;
+        // final inst = usuario.instituicao;
 
         return GruScaffold(
           title: 'Coletores',
           background: kFundoAdmin,
-          child: (vinculados.isEmpty && pendentes.isEmpty)
+          child: (vinculados.isEmpty)
               ? const EmptyState(
                   icon: Icons.groups_rounded,
                   titulo: 'Nenhum coletor ainda',
@@ -41,11 +41,10 @@ class AdminColetoresScreen extends StatelessWidget {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 150),
                   children: [
-                    if (inst != null)
                       Padding(
                         padding: const EdgeInsets.only(left: 4, bottom: 14),
                         child: Text(
-                          inst.nome,
+                          usuario?.instituicao == null ? "" : usuario!.instituicao,
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12.5),
                         ),
@@ -62,22 +61,9 @@ class AdminColetoresScreen extends StatelessWidget {
                     for (final c in vinculados) ...[
                       _ColetorCard(
                         coletor: c,
-                        instituicaoId: instId!,
                         vinculado: true,
                       ),
                       const SizedBox(height: 12),
-                    ],
-                    if (pendentes.isNotEmpty && instId != null) ...[
-                      const SizedBox(height: 10),
-                      _Titulo('Aguardando vínculo (${pendentes.length})'),
-                      for (final c in pendentes) ...[
-                        _ColetorCard(
-                          coletor: c,
-                          instituicaoId: instId,
-                          vinculado: false,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
                     ],
                   ],
                 ),
@@ -110,21 +96,15 @@ class _Titulo extends StatelessWidget {
 class _ColetorCard extends StatelessWidget {
   const _ColetorCard({
     required this.coletor,
-    required this.instituicaoId,
     required this.vinculado,
   });
 
   final UsuarioModel coletor;
-  final String instituicaoId;
   final bool vinculado;
 
   @override
   Widget build(BuildContext context) {
-    final db = MockDataService.instance;
-    final visitas = db.visitasDoColetor(coletor.id)
-        .where((v) => v.instituicaoId == instituicaoId)
-        .toList();
-    final ultima = visitas.isEmpty ? null : visitas.first.dataHora;
+    // final db = MockDataService.instance;
 
     return WhiteCard(
       child: Row(
@@ -133,7 +113,7 @@ class _ColetorCard extends StatelessWidget {
             radius: 22,
             backgroundColor: vinculado ? AppColors.dark : AppColors.orange,
             child: Text(
-              coletor.iniciais,
+              coletor.nomeUsuario.substring(0, 2).toUpperCase(),
               style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.w800),
             ),
@@ -144,7 +124,7 @@ class _ColetorCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  coletor.nome,
+                  coletor.nomeUsuario,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -154,60 +134,44 @@ class _ColetorCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  coletor.email,
+                  coletor.emailUsuario,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       fontSize: 12, color: AppColors.textMuted),
                 ),
-                if (vinculado) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.local_shipping_rounded,
-                          size: 13, color: AppColors.green),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${visitas.length} coletas'
-                        '${ultima != null ? ' · ${Fmt.relativo(ultima)}' : ''}',
-                        style: const TextStyle(
-                            fontSize: 11.5, color: AppColors.textMuted),
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
           ),
-          if (vinculado)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded,
-                  color: AppColors.textMuted),
-              onSelected: (_) {
-                db.desvincularColetor(coletor.id, instituicaoId);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('${coletor.primeiroNome} foi desvinculado.')));
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'desvincular', child: Text('Desvincular')),
-              ],
-            )
-          else
-            ElevatedButton(
-              onPressed: () {
-                db.vincularColetor(coletor.id, instituicaoId);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('${coletor.primeiroNome} foi vinculado!')));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.green,
-                minimumSize: const Size(0, 36),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                textStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-              ),
-              child: const Text('Vincular'),
-            ),
+          // if (vinculado)
+          //   PopupMenuButton<String>(
+          //     icon: const Icon(Icons.more_vert_rounded,
+          //         color: AppColors.textMuted),
+          //     onSelected: (_) {
+          //       db.desvincularColetor(coletor.id, instituicaoId);
+          //       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          //           content: Text('${coletor.nomeUsuario} foi desvinculado.')));
+          //     },
+          //     itemBuilder: (_) => const [
+          //       PopupMenuItem(value: 'desvincular', child: Text('Desvincular')),
+          //     ],
+          //   )
+          // else
+          //   ElevatedButton(
+          //     onPressed: () {
+          //       db.vincularColetor(coletor.id, instituicaoId);
+          //       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          //           content: Text('${coletor.primeiroNome} foi vinculado!')));
+          //     },
+          //     style: ElevatedButton.styleFrom(
+          //       backgroundColor: AppColors.green,
+          //       minimumSize: const Size(0, 36),
+          //       padding: const EdgeInsets.symmetric(horizontal: 16),
+          //       textStyle:
+          //           const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+          //     ),
+          //     child: const Text('Vincular'),
+          //   ),
         ],
       ),
     );

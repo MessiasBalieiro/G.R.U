@@ -11,6 +11,6 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'GRU_API_URL',
-    defaultValue: 'http://10.0.2.2:3000',
+    defaultValue: 'https://backend-gru.vercel.app',
   );
 }

@@ -5,20 +5,19 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/domain_styles.dart';
 import '../../data/models/lixeira_model.dart';
-import '../../data/models/residuo_model.dart';
 
 /// Barra horizontal de capacidade (animada, cor pela severidade).
 class CapacityBar extends StatelessWidget {
-  const CapacityBar({super.key, required this.ocupacao, this.height = 8});
+  const CapacityBar({super.key, required this.lixeira, this.height = 8});
 
-  final int ocupacao;
+  final LixeiraModel lixeira;
   final double height;
 
   @override
   Widget build(BuildContext context) {
-    final cor = corDoStatus(StatusLixeira.fromOcupacao(ocupacao));
+    final cor = corDoStatus(lixeira.statusLixeira);
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: (ocupacao / 100).clamp(0.0, 1.0)),
+      tween: Tween<double>(begin: 0, end: (lixeira.quantidadeResiduo / 120).clamp(0.0, 1.0)),
       duration: const Duration(milliseconds: 700),
       curve: Curves.easeOutCubic,
       builder: (context, v, _) {
@@ -51,16 +50,16 @@ class CapacityBar extends StatelessWidget {
 
 /// Anel de capacidade com a porcentagem no centro.
 class CapacityRing extends StatelessWidget {
-  const CapacityRing({super.key, required this.ocupacao, this.size = 124});
+  const CapacityRing({super.key, required this.lixeira, this.size = 124});
 
-  final int ocupacao;
+  final LixeiraModel lixeira;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final cor = corDoStatus(StatusLixeira.fromOcupacao(ocupacao));
+    final cor = corDoStatus(lixeira.statusLixeira);
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: (ocupacao / 100).clamp(0.0, 1.0)),
+      tween: Tween<double>(begin: 0, end: (lixeira.quantidadeResiduo / 120).clamp(0.0, 1.0)),
       duration: const Duration(milliseconds: 900),
       curve: Curves.easeOutCubic,
       builder: (context, v, _) {
@@ -74,7 +73,7 @@ class CapacityRing extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '$ocupacao%',
+                    '${(lixeira.quantidadeResiduo * 100) / 120}%',
                     style: TextStyle(
                       fontSize: size * 0.26,
                       fontWeight: FontWeight.w800,
@@ -177,14 +176,45 @@ class StatusChip extends StatelessWidget {
 
 /// Chip do tipo de resíduo (opcionalmente com a porcentagem).
 class MaterialChip extends StatelessWidget {
-  const MaterialChip({super.key, required this.tipo, this.percentual});
+  MaterialChip({super.key, required this.tipo, required this.lixeira, this.percentual});
 
-  final TipoResiduo tipo;
+  final String tipo;
+  final LixeiraModel lixeira;
   final int? percentual;
+
+  Map<String, dynamic> predominante = {};
 
   @override
   Widget build(BuildContext context) {
-    final cor = tipo.cor;
+    final cor = corDoStatus(lixeira.statusLixeira);
+
+    switch(tipo) {
+      case "quantPlastico":
+        predominante = {
+          "cor": AppColors.amber,
+          "icone": Icons.shopping_bag_outlined,
+          "label": "Plástico"
+        };
+      case "quantVidro":
+        predominante = {
+          "cor": AppColors.green,
+          "icone": Icons.wine_bar,
+          "label": "Vidro"
+        };
+      case "quantMetal":
+        predominante = {
+          "cor": AppColors.dark,
+          "icone": Icons.settings,
+          "label": "Metal"
+        };
+      case "quantPapel":
+        predominante = {
+          "cor": AppColors.sky,
+          "icone": Icons.newspaper,
+          "label": "Papel"
+        };
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -194,10 +224,10 @@ class MaterialChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(tipo.icone, size: 13, color: cor),
+          Icon(predominante['icone'], size: 13, color: cor),
           const SizedBox(width: 5),
           Text(
-            percentual == null ? tipo.label : '${tipo.label} $percentual%',
+            percentual == null ? predominante['label'] : '${predominante['label']} $percentual%',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,

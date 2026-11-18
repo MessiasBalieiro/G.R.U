@@ -1,10 +1,12 @@
-import express from "express"
-import dotenv from "dotenv"
-import routes from "./routes/routes.js"
+import express from 'express';
+import dotenv from 'dotenv';
+import routes from './Routes/Routes.js';
+import connection_db from './Database/connection.js';
 
 const app = express();
 
-dotenv.config()
+dotenv.config({ path: ".env.example"})
+connection_db();
 
 // CORS: o site (Flutter Web) roda em outra origem/porta e precisa
 // chamar a API pelo navegador. Em produção, troque "*" pelo domínio do site.

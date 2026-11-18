@@ -1,4 +1,4 @@
-import { perguntarAoCiclo } from "../services/ciclo.service.js";
+import { perguntarAoCiclo } from "../Services/Ciclo.service.js";
 
 /**
  * POST /ciclo/chat

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/utils/validators.dart';
 import '../../../data/repositories/usuario_repository.dart';
-import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/gru_button.dart';
 import '../../widgets/gru_mascot.dart';
@@ -24,6 +23,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final _email = TextEditingController();
   final _nome = TextEditingController();
   final _senha = TextEditingController();
+  final _phone = TextEditingController();
+  final _cpf = TextEditingController();
   final _instituicao = TextEditingController();
   final _repo = UsuarioRepository();
   bool _carregando = false;
@@ -34,6 +35,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
     _nome.dispose();
     _senha.dispose();
     _instituicao.dispose();
+    _phone.dispose();
+    _cpf.dispose();
     super.dispose();
   }
 
@@ -42,21 +45,22 @@ class _CadastroScreenState extends State<CadastroScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _carregando = true);
     try {
-      final u = await _repo.cadastrarAdministrador(
+      final u = await _repo.cadastrar(
         email: _email.text,
         nome: _nome.text,
         senha: _senha.text,
         instituicao: _instituicao.text,
+        cpf: _cpf.text,
+        telefone: _phone.text,
+        cargo: "CONTRATANTE"
       );
       if (!mounted) return;
-      SessionService.instance.entrar(u);
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil(AppRoutes.homePara(u.tipo), (_) => false);
-    } on AuthException catch (e) {
+      Navigator.of(context).pushNamed(AppRoutes.login);
+    } catch (e) {
       if (!mounted) return;
       setState(() => _carregando = false);
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.mensagem)));
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -108,6 +112,14 @@ class _CadastroScreenState extends State<CadastroScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    GruTextField(
+                      label: 'Nome',
+                      controller: _nome,
+                      validator: (v) => Validators.obrigatorio(v, 'Nome'),
+                    ),
+                    const SizedBox(height: 14),
+
                     GruTextField(
                       label: 'Email',
                       controller: _email,
@@ -115,12 +127,23 @@ class _CadastroScreenState extends State<CadastroScreen> {
                       validator: Validators.email,
                     ),
                     const SizedBox(height: 14),
+
                     GruTextField(
-                      label: 'Nome',
-                      controller: _nome,
-                      validator: (v) => Validators.obrigatorio(v, 'Nome'),
+                      label: 'Telefone',
+                      controller: _phone,
+                      keyboardType: TextInputType.phone,
+                      validator: Validators.telefone,
                     ),
                     const SizedBox(height: 14),
+
+                    GruTextField(
+                      label: 'CPF',
+                      controller: _cpf,
+                      keyboardType: TextInputType.number,
+                      validator: Validators.cpf,
+                    ),
+                    const SizedBox(height: 14),
+
                     GruTextField(
                       label: 'Senha',
                       controller: _senha,
@@ -128,6 +151,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                       validator: Validators.senha,
                     ),
                     const SizedBox(height: 14),
+
                     GruTextField(
                       label: 'Instituição',
                       controller: _instituicao,

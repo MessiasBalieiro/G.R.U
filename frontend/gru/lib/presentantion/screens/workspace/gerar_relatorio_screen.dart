@@ -113,19 +113,26 @@ class _ListaRelatorios extends StatelessWidget {
           Flexible(
             child: ListView.separated(
               shrinkWrap: true,
-              itemCount: MockDataService.relatorios.length,
-              separatorBuilder: (_, __) =>
+              itemCount: MockDataService.relatorios.length - 1,
+              separatorBuilder: (_, _) =>
                   const Divider(height: 1, color: AppColors.placeholder),
               itemBuilder: (context, index) {
                 final opcao = MockDataService.relatorios[index];
+
                 return ListTile(
                   leading: Icon(opcao.icone, color: AppColors.orange),
-                  title: Text(opcao.titulo,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(opcao.descricao,
-                      style: const TextStyle(fontSize: 12)),
-                  trailing: const Icon(Icons.chevron_right_rounded,
-                      color: AppColors.orange),
+                  title: Text(
+                    opcao.titulo,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    opcao.descricao,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.orange,
+                  ),
                   onTap: () => onSelecionar(opcao),
                 );
               },

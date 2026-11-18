@@ -1,9 +1,9 @@
-import { buscarConhecimento, tokenizar } from "./ciclo.rag.service.js";
+import { buscarConhecimento, tokenizar } from "./Ciclo.rag.service.js";
 import {
   executarFerramenta,
   graficoDaFerramenta,
   schemasDasFerramentas,
-} from "./ciclo.tools.js";
+} from "./Ciclo.tools.js";
 
 /**
  * Agente Ciclo.

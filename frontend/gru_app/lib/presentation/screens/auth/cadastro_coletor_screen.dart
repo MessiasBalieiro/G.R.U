@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/utils/validators.dart';
 import '../../../data/repositories/usuario_repository.dart';
-import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/gru_button.dart';
 import '../../widgets/gru_mascot.dart';
@@ -23,6 +22,8 @@ class _CadastroColetorScreenState extends State<CadastroColetorScreen> {
   final _email = TextEditingController();
   final _nome = TextEditingController();
   final _senha = TextEditingController();
+  final _phone = TextEditingController();
+  final _cpf = TextEditingController();
   final _repo = UsuarioRepository();
   bool _carregando = false;
 
@@ -31,6 +32,8 @@ class _CadastroColetorScreenState extends State<CadastroColetorScreen> {
     _email.dispose();
     _nome.dispose();
     _senha.dispose();
+    _phone.dispose();
+    _cpf.dispose();
     super.dispose();
   }
 
@@ -39,25 +42,32 @@ class _CadastroColetorScreenState extends State<CadastroColetorScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _carregando = true);
     try {
-      final u = await _repo.cadastrarColetor(
-        email: _email.text,
+      await _repo.cadastrar(
         nome: _nome.text,
+        email: _email.text,
+        telefone: _phone.text,
+        cpf: _cpf.text,
         senha: _senha.text,
+        instituicao: "",
+        cargo: "COLETOR"
       );
       if (!mounted) return;
-      SessionService.instance.entrar(u);
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil(AppRoutes.homePara(u.tipo), (_) => false);
-    } on AuthException catch (e) {
+      Navigator.of(context).pushNamed(AppRoutes.login);
+    } catch (e) {
       if (!mounted) return;
       setState(() => _carregando = false);
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.mensagem)));
+          .showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    // final providerWatchUsuario = context.watch<AuthProvider>();
+
     return AuthBlobBackground(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(8, 8, 24, 32),
@@ -94,18 +104,36 @@ class _CadastroColetorScreenState extends State<CadastroColetorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     GruTextField(
+                      label: 'Nome',
+                      controller: _nome,
+                      validator: (v) => Validators.obrigatorio(v, 'Nome'),
+                    ),
+                    const SizedBox(height: 16),
+
+                    GruTextField(
                       label: 'Email',
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       validator: Validators.email,
                     ),
                     const SizedBox(height: 16),
+                    
                     GruTextField(
-                      label: 'Nome',
-                      controller: _nome,
-                      validator: (v) => Validators.obrigatorio(v, 'Nome'),
+                      label: 'Telefone',
+                      controller: _phone,
+                      keyboardType: TextInputType.phone,
+                      validator: Validators.telefone,
                     ),
                     const SizedBox(height: 16),
+
+                    GruTextField(
+                      label: 'CPF',
+                      controller: _cpf,
+                      keyboardType: TextInputType.number,
+                      validator: Validators.cpf,
+                    ),
+                    const SizedBox(height: 16),
+
                     GruTextField(
                       label: 'Senha',
                       controller: _senha,

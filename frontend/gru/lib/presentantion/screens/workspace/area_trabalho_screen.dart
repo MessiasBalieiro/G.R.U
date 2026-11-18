@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../routes/app_routes.dart';
@@ -6,11 +8,19 @@ import '../../widgets/animated_svg_wave.dart';
 import '../../widgets/gru_mascot.dart';
 import '../../widgets/liquid_button.dart';
 
-class AreaTrabalhoScreen extends StatelessWidget {
+class AreaTrabalhoScreen extends StatefulWidget {
   const AreaTrabalhoScreen({super.key});
 
   @override
+  State<AreaTrabalhoScreen> createState() => _AreaTrabalhoScreenState();
+}
+
+
+class _AreaTrabalhoScreenState extends State<AreaTrabalhoScreen> {
+  @override
   Widget build(BuildContext context) {
+  final cargoUsuario = context.watch<AuthProvider>().usuario?.cargoUsuario;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -30,7 +40,7 @@ class AreaTrabalhoScreen extends StatelessWidget {
               ),
             ),
             PageContainer(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -38,24 +48,26 @@ class AreaTrabalhoScreen extends StatelessWidget {
                     Row(
                       children: [
                         IconButton(
-                          onPressed: () => Navigator.of(context)
-                              .pushNamedAndRemoveUntil(
-                                  AppRoutes.login, (_) => false),
-                          icon: const Icon(Icons.arrow_back_rounded,
+                          onPressed: () => {
+                              context.read<AuthProvider>().logout(),
+                              Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false)
+                            },
+                          icon: Icon(Icons.arrow_back_rounded,
                               color: AppColors.dark),
                           tooltip: 'Voltar para o Login',
                         ),
-                        const SizedBox(width: 4),
+
+                        SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: AppColors.green,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const GruMascot(size: 32),
+                          child: GruMascot(size: 32),
                         ),
-                        const Spacer(),
-                        const Text(
+                        Spacer(),
+                        Text(
                           'Área de Trabalho',
                           style: TextStyle(
                             color: AppColors.green,
@@ -65,11 +77,13 @@ class AreaTrabalhoScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 36),
+
+                    SizedBox(height: 36),
+
                     LayoutBuilder(builder: (context, constraints) {
                       final isMobile = constraints.maxWidth < 560;
 
-                      final cadastrar = LiquidButton(
+                      final cadastrarLixeira = LiquidButton(
                         icon: Icons.add_box_outlined,
                         label: 'Cadastrar Lixeira Inteligente',
                         color: AppColors.dark,
@@ -77,6 +91,7 @@ class AreaTrabalhoScreen extends StatelessWidget {
                         onTap: () => Navigator.of(context)
                             .pushNamed(AppRoutes.cadastroLixeira),
                       );
+
                       final relatorio = LiquidButton(
                         icon: Icons.description_outlined,
                         label: 'Gerar Relatório',
@@ -86,29 +101,44 @@ class AreaTrabalhoScreen extends StatelessWidget {
                             .pushNamed(AppRoutes.gerarRelatorio),
                       );
 
+                      final cadastrarColetor = LiquidButton(
+                        icon: Icons.add_box_outlined,
+                        label: 'Cadastrar Coletor',
+                        color: AppColors.dark,
+                        height: 190,
+                        onTap: () => Navigator.of(context)
+                            .pushNamed(AppRoutes.cadastroColetor),
+                      );
+
                       if (isMobile) {
-                        return Column(children: [
-                          cadastrar,
-                          const SizedBox(height: 20),
+                        return Column(children: cargoUsuario == "ADMINISTRADOR" ? [
+                          cadastrarLixeira,
+                        ]: [
+                          cadastrarColetor,
+                          SizedBox(height: 20),
                           relatorio,
                         ]);
                       }
 
-                      return Row(children: [
-                        Expanded(child: cadastrar),
-                        const SizedBox(width: 20),
-                        Expanded(child: relatorio),
+                      return Row(children: cargoUsuario == "ADMINISTRADOR" ?  [
+                        Expanded(child: cadastrarLixeira),
+                      ] : [
+                        Expanded(child: cadastrarColetor),
+                        SizedBox(width: 20),
+                        Expanded(child: relatorio)
                       ]);
                     }),
-                    const SizedBox(height: 20),
-                    LiquidButton(
+
+                    SizedBox(height: 20),
+
+                    if(cargoUsuario == "CONTRATANTE") LiquidButton(
                       icon: Icons.bar_chart_rounded,
                       label: 'Dashboard',
                       color: AppColors.green,
                       height: 100,
                       alignStart: true,
                       onTap: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.dashboard),
+                        Navigator.of(context).pushNamed(AppRoutes.dashboard),
                     ),
                   ],
                 ),

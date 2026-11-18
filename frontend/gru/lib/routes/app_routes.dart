@@ -4,6 +4,7 @@ import '../presentantion/screens/auth/login_screen.dart';
 import '../presentantion/screens/auth/cadastro_screen.dart';
 import '../presentantion/screens/app_download/app_download_screen.dart';
 import '../presentantion/screens/workspace/area_trabalho_screen.dart';
+import '../presentantion/screens/workspace/cadastro_coletor_screen.dart';
 import '../presentantion/screens/workspace/cadastro_lixeira_screen.dart';
 import '../presentantion/screens/workspace/gerar_relatorio_screen.dart';
 import '../presentantion/screens/workspace/dashboard_screen.dart';
@@ -20,6 +21,7 @@ class AppRoutes {
   static const appDownload = '/app';
   static const areaTrabalho = '/area-trabalho';
   static const cadastroLixeira = '/cadastro-lixeira';
+  static const cadastroColetor = '/cadastro-coletor';
   static const gerarRelatorio = '/gerar-relatorio';
   static const dashboard = '/dashboard';
 
@@ -30,6 +32,7 @@ class AppRoutes {
         appDownload: (_) => const AppDownloadScreen(),
         areaTrabalho: (_) => const AreaTrabalhoScreen(),
         cadastroLixeira: (_) => const CadastroLixeiraScreen(),
+        cadastroColetor: (_) => const CadastroColetorScreen(),
         gerarRelatorio: (_) => const GerarRelatorioScreen(),
         dashboard: (_) => const DashboardScreen(),
       };

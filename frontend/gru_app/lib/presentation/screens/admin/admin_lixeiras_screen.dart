@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:gru_app/providers/lixeira_provider.dart';
+import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../data/services/mock_data_service.dart';
-import '../../../data/services/session_service.dart';
 import '../../../routes/app_routes.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/gru_scaffold.dart';
 import '../../widgets/lixeira_card.dart';
 import '../../widgets/search_field.dart';
-import 'nova_lixeira_sheet.dart';
 
 /// "Tela Lixeiras - Admin": lista das lixeiras da instituição + cadastro.
 class AdminLixeirasScreen extends StatefulWidget {
@@ -28,37 +26,34 @@ class _AdminLixeirasScreenState extends State<AdminLixeirasScreen> {
     super.dispose();
   }
 
-  Future<void> _nova() async {
-    final ok = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const NovaLixeiraSheet(),
-    );
-    if (ok == true && mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Lixeira cadastrada!')));
-    }
-  }
+  // Future<void> _nova() async {
+  //   final ok = await showModalBottomSheet<bool>(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     useSafeArea: true,
+  //     builder: (_) => const NovaLixeiraSheet(),
+  //   );
+  //   if (ok == true && mounted) {
+  //     ScaffoldMessenger.of(context)
+  //         .showSnackBar(const SnackBar(content: Text('Lixeira cadastrada!')));
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
-    final usuario = SessionService.instance.usuario!;
-    final db = MockDataService.instance;
+    final providerWatch = context.watch<LixeiraProvider>();
+    // final providerRead = context.read<LixeiraProvider>();
+    // final providerReadUsuario = context.read<AuthProvider>();
+    // final providerWatchUsuario = context.watch<AuthProvider>();
+
+    // final db = MockDataService.instance;
 
     return ListenableBuilder(
-      listenable: db,
+      listenable: providerWatch,
       builder: (context, _) {
-        final todas = db.lixeirasDasInstituicoes(usuario.instituicaoIds);
+        final todas = providerWatch.lixeiras;
         final termo = _termo.trim().toLowerCase();
-        final lista = todas
-            .where((l) =>
-                termo.isEmpty ||
-                l.nome.toLowerCase().contains(termo) ||
-                l.endereco.toLowerCase().contains(termo) ||
-                    l.cep.replaceAll('-', '').contains(termo.replaceAll('-', '')))
-            .toList()
-          ..sort((a, b) => b.ocupacao.compareTo(a.ocupacao));
+        final lista = todas.where((l) => termo.isEmpty || l.nomeLixeira.toLowerCase().contains(termo) || l.enderecoLixeira.toLowerCase().contains(termo)).toList()..sort((a, b) => b.quantidadeResiduo.compareTo(a.quantidadeResiduo));
 
         return GruScaffold(
           title: 'Lixeiras',
@@ -75,20 +70,20 @@ class _AdminLixeirasScreenState extends State<AdminLixeirasScreen> {
                         onChanged: (v) => setState(() => _termo = v),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Material(
-                      color: AppColors.orange,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _nova,
-                        child: const Padding(
-                          padding: EdgeInsets.all(13),
-                          child: Icon(Icons.add_rounded,
-                              color: Colors.white, size: 24),
-                        ),
-                      ),
-                    ),
+                    // const SizedBox(width: 10),
+                    // Material(
+                    //   color: AppColors.orange,
+                    //   shape: const CircleBorder(),
+                    //   child: InkWell(
+                    //     customBorder: const CircleBorder(),
+                    //     onTap: _nova,
+                    //     child: const Padding(
+                    //       padding: EdgeInsets.all(13),
+                    //       child: Icon(Icons.add_rounded,
+                    //           color: Colors.white, size: 24),
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
@@ -112,13 +107,13 @@ class _AdminLixeirasScreenState extends State<AdminLixeirasScreen> {
                             ? 'Nenhuma lixeira ainda'
                             : 'Nada encontrado',
                         mensagem: todas.isEmpty
-                            ? 'Toque no + para cadastrar sua primeira lixeira inteligente.'
+                            ? 'Tente buscar por outro nome ou endereço.'
                             : 'Tente buscar por outro nome ou endereço.',
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(20, 4, 20, 150),
                         itemCount: lista.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
                         itemBuilder: (context, i) => LixeiraCard(
                           lixeira: lista[i],
                           onTap: () => Navigator.of(context).pushNamed(

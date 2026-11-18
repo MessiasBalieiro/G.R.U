@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:gru/providers/auth_provider.dart';
+import 'package:gru/providers/lixeira_provider.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/models/lixeira_model.dart';
+import '../../../data/models/usuario_model.dart';
 import '../../../data/repositories/lixeira_repository.dart';
+import '../../../data/repositories/usuario_repository.dart';
 import '../../widgets/workspace_header.dart';
 
 class CadastroLixeiraScreen extends StatefulWidget {
@@ -12,24 +17,31 @@ class CadastroLixeiraScreen extends StatefulWidget {
   State<CadastroLixeiraScreen> createState() => _CadastroLixeiraScreenState();
 }
 
-class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen>
-    with TickerProviderStateMixin {
+class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen> with TickerProviderStateMixin {
   final _repository = LixeiraRepository();
-  final _idController = TextEditingController();
+  final _usuarioRepository = UsuarioRepository();
+  final _cpfController = TextEditingController();
+  final _cpfContratanteController = TextEditingController();
+  final _nomeContratanteController = TextEditingController();
   final _nomeController = TextEditingController();
-  final _infoController = TextEditingController();
+  final _enderecoController = TextEditingController();
+  final _coordenadaController = TextEditingController();
   final _buscaController = TextEditingController();
 
   List<LixeiraModel> _lixeiras = [];
-  bool _carregando = true;
+  bool _carregando = false;
   bool _salvando = false;
+  bool _pesquisando = false;
 
   // Controla se o formulário está expandido
-  bool _formAberto = true;
+  bool _formAberto = false;
+  bool _formContratanteAberto = false;
 
   // Animação de rotação do botão +
   late final AnimationController _btnCtrl;
   late final Animation<double> _btnRotation;
+  late final AnimationController _btnCtrlContratante;
+  late final Animation<double> _btnRotationContratante;
 
   // Animação de entrada do card do formulário
   late final AnimationController _cardCtrl;
@@ -48,6 +60,14 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen>
     _btnRotation = Tween<double>(begin: 0, end: 0.125) // 45°
         .animate(CurvedAnimation(parent: _btnCtrl, curve: Curves.easeOut));
 
+    _btnCtrlContratante = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
+    _btnRotationContratante = Tween<double>(begin: 0, end: 0.125) // 45°
+        .animate(CurvedAnimation(parent: _btnCtrlContratante, curve: Curves.easeOut));
+
+    _btnCtrl.reverse();
+    _btnCtrlContratante.reverse();
+
     _cardCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 500));
     _cardSlide = Tween<Offset>(begin: const Offset(-0.06, 0), end: Offset.zero)
@@ -58,25 +78,32 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen>
     _listaCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
 
-    _carregar();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _carregar(provider: context.read<LixeiraProvider>());
+    });
+
   }
 
   @override
   void dispose() {
     _btnCtrl.dispose();
+    _btnCtrlContratante.dispose();
     _cardCtrl.dispose();
     _listaCtrl.dispose();
-    _idController.dispose();
+    _cpfController.dispose();
+    _cpfContratanteController.dispose();
+    _nomeContratanteController.dispose();
     _nomeController.dispose();
-    _infoController.dispose();
+    _enderecoController.dispose();
+    _coordenadaController.dispose();
     _buscaController.dispose();
     super.dispose();
   }
 
-  Future<void> _carregar({String? termo}) async {
+  Future<void> _carregar({String? termo, LixeiraProvider? provider}) async {
     setState(() => _carregando = true);
     _listaCtrl.reset();
-    final lista = await _repository.listar(termoBusca: termo);
+    final lista = await provider!.buscarLixeiras(termoBusca: termo);
     if (!mounted) return;
     setState(() {
       _lixeiras = lista;
@@ -85,49 +112,120 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen>
     _listaCtrl.forward();
   }
 
-  Future<void> _cadastrarLixeira() async {
-    if (_nomeController.text.trim().isEmpty) {
+  Future<void> _cadastrarLixeira(LixeiraProvider providerRead, AuthProvider providerReadUsuario) async {
+    if (_nomeController.text.trim().isEmpty || _enderecoController.text.trim().isEmpty || _coordenadaController.text.trim().isEmpty || _cpfController.text.trim().isEmpty || _nomeContratanteController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe ao menos o nome da lixeira.')),
+        const SnackBar(content: Text('Informe todos os campos.')),
       );
       return;
     }
+
     setState(() => _salvando = true);
     _btnCtrl.forward();
 
-    await _repository.cadastrar(LixeiraModel(
-      id: _idController.text.trim().isEmpty
-          ? DateTime.now().millisecondsSinceEpoch.toString()
-          : _idController.text.trim(),
-      nome: _nomeController.text.trim(),
-      codigoDonoLixeira: 'INST-000',
-      enderecoLixeira: '-',
-      coordenada: '-',
-      statusLixeira: StatusLixeira.vazia,
-      outrasInformacoes: _infoController.text.trim(),
-    ));
+    final resposta = await _repository.cadastrar(_cpfController.text.trim(), _nomeContratanteController.text.trim(), _nomeController.text.trim(), _enderecoController.text.trim(), _coordenadaController.text.trim(), providerReadUsuario.organizacao['_id']);
 
-    _idController.clear();
-    _nomeController.clear();
-    _infoController.clear();
-    if (!mounted) return;
-    setState(() => _salvando = false);
-    _btnCtrl.reverse();
-    await _carregar();
-    if (!mounted) return;
+    if (resposta['_id'] != null && resposta['_id'].toString().isNotEmpty) {
+      providerRead.adicionarLixeira(LixeiraModel(
+        id: resposta['_id'],
+        nomeLixeira: resposta['nome_lixeira'],
+        codigoDonoLixeira: resposta['codigo_dono_lixeira'],
+        enderecoLixeira: resposta['endereco_lixeira'],
+        coordenada: resposta['coordenada'],
+        quantidadeResiduo: resposta['quantidade_residuo'] ?? 0,
+        statusLixeira: StatusLixeira.fromCodigo(resposta['status_lixeira']),
+      ));
+
+      _cpfController.clear();
+      _nomeContratanteController.clear();
+      _nomeController.clear();
+      _enderecoController.clear();
+      _coordenadaController.clear();
+
+      if (!mounted) return;
+      setState(() => _salvando = false);
+      _btnCtrl.reverse();
+      if (!mounted) return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
-          children: [
+        content: Row(
+          children: resposta['_id'] != null && resposta['_id'].toString().isNotEmpty ? [
             Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
             SizedBox(width: 10),
             Text('Lixeira cadastrada com sucesso!'),
+          ] : [
+            Icon(Icons.error, color: Colors.white, size: 18),
+            SizedBox(width: 10),
+            Text(resposta['message']),
           ],
         ),
         backgroundColor: AppColors.green,
         behavior: SnackBarBehavior.floating,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Future<void> _buscarContratante(LixeiraProvider providerRead, AuthProvider providerReadUsuario) async {
+    if (_cpfContratanteController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o CPF do contratante.')),
+      );
+      return;
+    }
+
+    setState(() => _pesquisando = true);
+    _btnCtrl.forward();
+
+    final resposta = await _usuarioRepository.buscarUsuario(cpf: _cpfContratanteController.text.trim(), cargo: 'CONTRATANTE');
+
+    if (resposta['_id'] != null && resposta['_id'].toString().isNotEmpty) {
+      providerReadUsuario.definirContratante(UsuarioModel(
+        id: resposta['_id'],
+        nomeUsuario: resposta['nome_usuario'],
+        emailUsuario: resposta['email_usuario'],
+        telefoneUsuario: resposta['telefone_usuario'],
+        cpfUsuario: resposta['cpf_usuario'],
+        cargoUsuario: resposta['cargo_usuario'],
+        instituicao: resposta['instituicao_usuario'],
+        coletasRealizadas: resposta['coletas_realizadas'],
+      ));
+
+      if (!mounted) return;
+      setState(() => _pesquisando = false);
+      _btnCtrl.reverse();
+      if (!mounted) return;
+
+      providerRead.limparLixeiras();
+      providerRead.definirLixeiras(await _repository.listar(codigoDonoLixeira: resposta['_id']));
+
+      final respostaOrg = await _usuarioRepository.buscarOrganizacao(idContratante: resposta['_id']);
+
+      if (respostaOrg != null) {
+        providerReadUsuario.definirOrganizacao(respostaOrg);
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: resposta['_id'] != null && resposta['_id'].toString().isNotEmpty ? [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 10),
+            Text('Usuário encontrado: ${resposta['nome_usuario']}'),
+          ] : [
+            Icon(Icons.error, color: Colors.white, size: 18),
+            SizedBox(width: 10),
+            Text('Usuário não encontrado ou não é um contratante'),
+          ],
+        ),
+        backgroundColor: AppColors.green,
+        behavior: SnackBarBehavior.floating,
+        shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -135,14 +233,29 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen>
   void _toggleForm() {
     setState(() => _formAberto = !_formAberto);
     if (_formAberto) {
-      _btnCtrl.reverse();
-    } else {
       _btnCtrl.forward();
+    } else {
+      _btnCtrl.reverse();
+    }
+  }
+
+  void _toggleFormContratante() {
+    setState(() => _formContratanteAberto = !_formContratanteAberto);
+    if (_formContratanteAberto) {
+      _btnCtrlContratante.forward();
+    } else {
+      _btnCtrlContratante.reverse();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+  final providerWatch = context.watch<LixeiraProvider>();
+  final providerRead = context.read<LixeiraProvider>();
+  final providerReadUsuario = context.read<AuthProvider>();
+  final providerWatchUsuario = context.watch<AuthProvider>();
+  _lixeiras = providerWatch.lixeiras;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       body: SafeArea(
@@ -190,20 +303,39 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen>
                     _MiniStatsRow(lixeiras: _lixeiras),
                     const SizedBox(height: 18),
 
-                    // Card de cadastro com animação de entrada
+                    FadeTransition(
+                      opacity: _cardFade,
+                      child: SlideTransition(
+                        position: _cardSlide,
+                        child: _BuscarContratanteCard(
+                          cpfContratanteController: _cpfContratanteController,
+                          pesquisando: _pesquisando,
+                          abertoFormsContratante: _formContratanteAberto,
+                          btnRotation: _btnRotationContratante,
+                          onToggle: _toggleFormContratante,
+                          onBuscarContratante: () => _buscarContratante(providerRead, providerReadUsuario),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
                     FadeTransition(
                       opacity: _cardFade,
                       child: SlideTransition(
                         position: _cardSlide,
                         child: _CadastroCard(
-                          idController: _idController,
+                          cpfController: _cpfController,
+                          nomeContratanteController: _nomeContratanteController,
                           nomeController: _nomeController,
-                          infoController: _infoController,
+                          enderecoController: _enderecoController,
+                          coordenadaController: _coordenadaController,
                           salvando: _salvando,
                           aberto: _formAberto,
                           btnRotation: _btnRotation,
                           onToggle: _toggleForm,
-                          onAdicionar: _cadastrarLixeira,
+                          onAdicionar: () => _cadastrarLixeira(providerRead, providerReadUsuario),
+                          providerReadUsuario: providerReadUsuario,
+                          providerWatchUsuario: providerWatchUsuario,
                         ),
                       ),
                     ),
@@ -212,7 +344,7 @@ class _CadastroLixeiraScreenState extends State<CadastroLixeiraScreen>
                     // Card de pesquisa + lista animada
                     _PesquisarCard(
                       buscaController: _buscaController,
-                      onBuscar: (t) => _carregar(termo: t),
+                      onBuscar: (t) => _carregar(termo: t, provider: providerWatch),
                       lixeiras: _lixeiras,
                       carregando: _carregando,
                       listaCtrl: _listaCtrl,
@@ -245,8 +377,9 @@ class _DotPainter extends CustomPainter {
     final p = Paint()..color = AppColors.dark.withValues(alpha: 0.04);
     const step = 28.0;
     for (double x = step; x < size.width; x += step)
-      for (double y = step; y < size.height; y += step)
+      for (double y = step; y < size.height; y += step) {
         canvas.drawCircle(Offset(x, y), 1.4, p);
+      }
   }
 
   @override
@@ -338,16 +471,12 @@ class _MiniStatsRow extends StatelessWidget {
   const _MiniStatsRow({required this.lixeiras});
   final List<LixeiraModel> lixeiras;
 
+
   @override
   Widget build(BuildContext context) {
     final total = lixeiras.length;
-    final cheias = lixeiras
-        .where((l) => l.statusLixeira == StatusLixeira.cheia)
-        .length;
-    final livres = lixeiras
-        .where((l) => l.statusLixeira == StatusLixeira.vazia ||
-            l.statusLixeira == StatusLixeira.baixa)
-        .length;
+    final cheias = lixeiras.where((l) => l.statusLixeira == StatusLixeira.cheia).length;
+    final livres = lixeiras.where((l) => l.statusLixeira == StatusLixeira.vazia || l.statusLixeira == StatusLixeira.baixa).length;
 
     return Row(
       children: [
@@ -433,29 +562,23 @@ class _MiniStat extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CARD DE CADASTRO (expand/collapse animado + botão rotativo)
-// ═══════════════════════════════════════════════════════════════════════════
-class _CadastroCard extends StatelessWidget {
-  const _CadastroCard({
-    required this.idController,
-    required this.nomeController,
-    required this.infoController,
-    required this.salvando,
-    required this.aberto,
+
+class _BuscarContratanteCard extends StatelessWidget {
+  const _BuscarContratanteCard({
+    required this.cpfContratanteController,
+    required this.pesquisando,
+    required this.abertoFormsContratante,
     required this.btnRotation,
     required this.onToggle,
-    required this.onAdicionar,
+    required this.onBuscarContratante,
   });
 
-  final TextEditingController idController;
-  final TextEditingController nomeController;
-  final TextEditingController infoController;
-  final bool salvando;
-  final bool aberto;
+  final bool pesquisando;
+  final bool abertoFormsContratante;
   final Animation<double> btnRotation;
   final VoidCallback onToggle;
-  final VoidCallback onAdicionar;
+  final VoidCallback onBuscarContratante;
+  final TextEditingController cpfContratanteController;
 
   @override
   Widget build(BuildContext context) {
@@ -502,7 +625,180 @@ class _CadastroCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   const Text(
-                    'Cadastrar nova Lixeira',
+                    'Buscar por CPF do Contratante',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15),
+                  ),
+                  const Spacer(),
+                  // Botão + que vira × ao expandir
+                  RotationTransition(
+                    turns: btnRotation,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.orange,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.add_rounded,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Campos — AnimatedSize faz o collapse suave
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: abertoFormsContratante
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _AnimatedField(
+                          label: 'CPF do Contratante',
+                          controller: cpfContratanteController,
+                          icon: Icons.edit_rounded,
+                          hint: 'Ex: 123.456.789-00',
+                          activated: true,
+                          delay: const Duration(milliseconds: 80),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: pesquisando
+                                    ? AppColors.orange.withValues(alpha: 0.6)
+                                    : AppColors.orange,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                elevation: pesquisando ? 0 : 4,
+                                shadowColor:
+                                    AppColors.orange.withValues(alpha: 0.4),
+                              ),
+                              onPressed: pesquisando ? null : onBuscarContratante,
+                              icon: pesquisando
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white))
+                                  : const Icon(Icons.search,
+                                      color: Colors.white, size: 18),
+                              label: Text(
+                                pesquisando ? 'Pesquisando...' : 'Buscar',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CARD DE CADASTRO (expand/collapse animado + botão rotativo)
+// ═══════════════════════════════════════════════════════════════════════════
+class _CadastroCard extends StatelessWidget {
+  const _CadastroCard({
+    required this.cpfController,
+    required this.nomeContratanteController,
+    required this.nomeController,
+    required this.enderecoController,
+    required this.coordenadaController,
+    required this.salvando,
+    required this.aberto,
+    required this.btnRotation,
+    required this.onToggle,
+    required this.onAdicionar,
+    required this.providerReadUsuario,
+    required this.providerWatchUsuario,
+  });
+
+  final TextEditingController cpfController;
+  final TextEditingController nomeContratanteController;
+  final TextEditingController nomeController;
+  final TextEditingController enderecoController;
+  final TextEditingController coordenadaController;
+  final bool salvando;
+  final bool aberto;
+  final Animation<double> btnRotation;
+  final VoidCallback onToggle;
+  final VoidCallback onAdicionar;
+  final AuthProvider providerReadUsuario;
+  final AuthProvider providerWatchUsuario;
+
+  @override
+  Widget build(BuildContext context) {
+    cpfController.text = providerReadUsuario.contratante?.cpfUsuario ?? '';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+              color: AppColors.orange.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 6)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header clicável para expandir/colapsar
+          InkWell(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            onTap: onToggle,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: const BoxDecoration(
+                color: AppColors.dark,
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(18)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    providerWatchUsuario.contratante != null ? 'Cadastrar nova Lixeira para ${providerWatchUsuario.contratante!.instituicao}' : 'Cadastrar nova Lixeira',
                     style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -539,27 +835,48 @@ class _CadastroCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _AnimatedField(
-                          label: 'ID Lixeira',
-                          controller: idController,
-                          icon: Icons.tag_rounded,
-                          hint: 'Opcional — gerado automaticamente',
-                          delay: const Duration(milliseconds: 0),
+                          label: 'CPF do Contratante',
+                          controller: cpfController,
+                          icon: Icons.edit_rounded,
+                          hint: 'Ex: 123.456.789-00',
+                          activated: false, // Desativado, pois o CPF já foi buscado
+                          delay: const Duration(milliseconds: 80),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 20),
+                        _AnimatedField(
+                          label: 'Nome da Instituição',
+                          controller: nomeContratanteController,
+                          icon: Icons.edit_rounded,
+                          hint: 'Ex: EcoVida',
+                          activated: true,
+                          delay: const Duration(milliseconds: 80),
+                        ),
+                        const SizedBox(height: 20),
                         _AnimatedField(
                           label: 'Nome da Lixeira',
                           controller: nomeController,
                           icon: Icons.edit_rounded,
                           hint: 'Ex: Lixeira Praça Central',
+                          activated: true,
                           delay: const Duration(milliseconds: 80),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 20),
                         _AnimatedField(
-                          label: 'Outras informações',
-                          controller: infoController,
-                          icon: Icons.info_outline_rounded,
-                          hint: 'Tipo de coleta, localização...',
-                          delay: const Duration(milliseconds: 160),
+                          label: 'Endereço da Lixeira',
+                          controller: enderecoController,
+                          icon: Icons.edit_rounded,
+                          hint: 'Ex: Av. Francisco Pignatari, 650 - Vila Gustavo Correia, Carapicuíba - SP, 06310-390',
+                          activated: true,
+                          delay: const Duration(milliseconds: 80),
+                        ),
+                        const SizedBox(height: 20),
+                        _AnimatedField(
+                          label: 'Coordenadas da Lixeira',
+                          controller: coordenadaController,
+                          icon: Icons.edit_rounded,
+                          hint: 'Ex: 23.5489, -46.6388',
+                          activated: true,
+                          delay: const Duration(milliseconds: 80),
                         ),
                         const SizedBox(height: 20),
                         // Botão de envio
@@ -618,19 +935,20 @@ class _AnimatedField extends StatefulWidget {
     required this.icon,
     required this.hint,
     required this.delay,
+    required this.activated,
   });
   final String label;
   final TextEditingController controller;
   final IconData icon;
   final String hint;
   final Duration delay;
+  final bool activated;
 
   @override
   State<_AnimatedField> createState() => _AnimatedFieldState();
 }
 
-class _AnimatedFieldState extends State<_AnimatedField>
-    with SingleTickerProviderStateMixin {
+class _AnimatedFieldState extends State<_AnimatedField> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<Offset> _slide;
   late final Animation<double> _fade;
@@ -684,6 +1002,7 @@ class _AnimatedFieldState extends State<_AnimatedField>
             Focus(
               onFocusChange: (f) => setState(() => _focado = f),
               child: TextField(
+                enabled: widget.activated,
                 controller: widget.controller,
                 decoration: InputDecoration(
                   hintText: widget.hint,
@@ -729,20 +1048,20 @@ class _AnimatedFieldState extends State<_AnimatedField>
 class _PesquisarCard extends StatelessWidget {
   const _PesquisarCard({
     required this.buscaController,
-    required this.onBuscar,
     required this.lixeiras,
     required this.carregando,
     required this.listaCtrl,
+    required this.onBuscar,
   });
 
   final TextEditingController buscaController;
-  final ValueChanged<String> onBuscar;
   final List<LixeiraModel> lixeiras;
   final bool carregando;
   final AnimationController listaCtrl;
+  final ValueChanged<String> onBuscar;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) {  
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -789,35 +1108,35 @@ class _PesquisarCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       fontSize: 15),
                 ),
-                const Spacer(),
-                SizedBox(
-                  width: 160,
-                  height: 34,
-                  child: TextField(
-                    controller: buscaController,
-                    onSubmitted: onBuscar,
-                    onChanged: (v) {
-                      if (v.isEmpty) onBuscar('');
-                    },
-                    style:
-                        const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar...',
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      prefixIcon: const Icon(Icons.search_rounded,
-                          color: Colors.white54, size: 16),
-                      isDense: true,
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.12),
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 6),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
+                // const Spacer(),
+                // SizedBox(
+                //   width: 160,
+                //   height: 34,
+                //   child: TextField(
+                //     controller: buscaController,
+                //     onSubmitted: onBuscar,
+                //     onChanged: (v) {
+                //       if (v.isEmpty) onBuscar('');
+                //     },
+                //     style:
+                //         const TextStyle(color: Colors.white, fontSize: 13),
+                //     decoration: InputDecoration(
+                //       hintText: 'Buscar...',
+                //       hintStyle: const TextStyle(color: Colors.white54),
+                //       prefixIcon: const Icon(Icons.search_rounded,
+                //           color: Colors.white54, size: 16),
+                //       isDense: true,
+                //       filled: true,
+                //       fillColor: Colors.white.withValues(alpha: 0.12),
+                //       contentPadding:
+                //           const EdgeInsets.symmetric(vertical: 6),
+                //       border: OutlineInputBorder(
+                //         borderRadius: BorderRadius.circular(20),
+                //         borderSide: BorderSide.none,
+                //       ),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -848,13 +1167,13 @@ class _PesquisarCard extends StatelessWidget {
           else
             ListView.separated(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+              physics: NeverScrollableScrollPhysics(),
               itemCount: lixeiras.length,
-              separatorBuilder: (_, __) => const Divider(
+              separatorBuilder: (_, _) => Divider(
                   height: 1,
                   indent: 20,
                   endIndent: 20,
-                  color: Color(0xFFF0F0F0)),
+                  color: Color.fromARGB(255, 235, 235, 235)),
               itemBuilder: (context, index) {
                 // Cada item entra com um delay escalonado
                 final itemAnim = CurvedAnimation(
@@ -869,8 +1188,8 @@ class _PesquisarCard extends StatelessWidget {
                   opacity: itemAnim,
                   child: SlideTransition(
                     position: Tween<Offset>(
-                            begin: const Offset(0.08, 0), end: Offset.zero)
-                        .animate(itemAnim),
+                      begin: Offset(0.08, 0), end: Offset.zero
+                    ).animate(itemAnim),
                     child: _LixeiraItem(lixeira: lixeiras[index]),
                   ),
                 );
@@ -929,7 +1248,7 @@ class _LixeiraItemState extends State<_LixeiraItem> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.lixeira.nome,
+                    widget.lixeira.nomeLixeira,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
@@ -938,9 +1257,9 @@ class _LixeiraItemState extends State<_LixeiraItem> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    widget.lixeira.outrasInformacoes?.isNotEmpty == true
-                        ? widget.lixeira.outrasInformacoes!
-                        : 'ID: ${widget.lixeira.id}',
+                    widget.lixeira.enderecoLixeira.isNotEmpty == true
+                        ? widget.lixeira.enderecoLixeira
+                        : 'Sem endereço cadastrado',
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textMuted),
                     maxLines: 1,

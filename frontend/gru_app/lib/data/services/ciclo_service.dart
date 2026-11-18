@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:gru_app/providers/lixeira_provider.dart';
+import 'package:gru_app/providers/user_provider.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/config/api_config.dart';
 import '../models/ciclo_model.dart';
-import '../models/residuo_model.dart';
 import '../models/usuario_model.dart';
-import 'mock_data_service.dart';
 
 class CicloException implements Exception {
   CicloException(this.mensagem);
@@ -70,61 +70,84 @@ class CicloService {
     }
   }
 
-  /// Monta o snapshot com os MESMOS dados/fórmulas dos gráficos do Dashboard.
-  static Map<String, dynamic> montarSnapshot(UsuarioModel admin) {
-    final db = MockDataService.instance;
-    final lixeiras = db.lixeirasDasInstituicoes(admin.instituicaoIds);
-    final instId = admin.instituicaoPrincipalId;
-    final inst = instId == null ? null : db.instituicaoPorId(instId);
-    final visitas = db.visitasDasInstituicoes(admin.instituicaoIds);
+  // Monta o snapshot com os MESMOS dados/fórmulas dos gráficos do Dashboard.
+
+  static Map<String, dynamic> montarSnapshot(AuthProvider authProvider, LixeiraProvider lixeiraProvider) {
+    // final db = MockDataService.instance;
+    // final lixeiras = db.lixeirasDasInstituicoes(admin.instituicaoIds);
+    final lixeiras = lixeiraProvider.lixeiras;
+    // final instId = admin.instituicaoPrincipalId;
+    // final instId = authProvider.organizacao['_id'];
+    final ranking = <({UsuarioModel coletor, int coletas})>[];
+    final inst = authProvider.organizacao;
+    final visitas = authProvider.organizacao['history'];
     final agora = DateTime.now();
+
+
+    for (final c in authProvider.coletores) {
+      final n = c.coletasRealizadas;
+      ranking.add((coletor: c, coletas: n));
+    }
+
+    if(ranking.isNotEmpty) {
+      ranking.sort((a, b) => b.coletas.compareTo(a.coletas));
+    }
+
 
     final media = lixeiras.isEmpty
         ? 0
-        : (lixeiras.map((l) => l.ocupacao).reduce((a, b) => a + b) /
+        : (lixeiras.map((l) => l.quantidadeResiduo).reduce((a, b) => a + b) /
                 lixeiras.length)
             .round();
-    final limite = agora.subtract(const Duration(days: 30));
+    // final limite = agora.subtract(const Duration(days: 30));
 
     // Composição geral ponderada pela ocupação (igual ao gráfico de rosca).
-    final soma = {for (final t in TipoResiduo.values) t: 0.0};
-    for (final l in lixeiras) {
-      l.composicao.forEach((t, pct) => soma[t] = soma[t]! + l.ocupacao * pct / 100);
-    }
-    final total = soma.values.fold<double>(0, (a, b) => a + b);
+    final soma = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.quantidadeResiduo);
+    final somaPlastico = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantPlastico']!);
+    final somaVidro = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantVidro']!);
+    final somaMetal = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantMetal']!);
+    final somaPapel = lixeiras.fold(0, (soma, lixeira) => soma + lixeira.composicao['quantPapel']!);
+
+    // final soma = {for (final t in TipoResiduo.values) t: 0.0};
+
+    // for (final l in lixeiras) {
+    //   l.composicao.forEach((t, pct) => soma[t] = soma[t]! + l.ocupacao * pct / 100);
+    // }
 
     return {
-      'instituicao': inst?.nome ?? 'Minha instituição',
+      'instituicao': inst['organization_name'] ?? 'Minha instituição',
       'geradoEm': agora.toUtc().toIso8601String(),
       'kpis': {
         'lixeiras': lixeiras.length,
         'ocupacaoMedia': media,
-        'paraColetar': lixeiras.where((l) => l.status.codigo >= 3).length,
-        'coletas30d': visitas.where((v) => v.dataHora.isAfter(limite)).length,
+        'paraColetar': lixeiras.where((l) => l.statusLixeira.codigo >= 3).length,
+        'coletas30d': visitas.length,
       },
       'lixeiras': [
         for (final l in lixeiras)
           {
             'id': l.id,
-            'nome': l.nome,
-            'endereco': l.endereco,
-            'cep': l.cepFormatado,
-            'ocupacao': l.ocupacao,
-            'status': l.status.label,
+            'nome': l.nomeLixeira,
+            'endereco': l.enderecoLixeira,
+            'cep': "",
+            'ocupacao': l.quantidadeResiduo,
+            'status': l.statusLixeira.label,
             'composicao': {
-              for (final e in l.composicao.entries) e.key.label: e.value,
+              for (final e in l.composicao.entries) e.key: e.value,
             },
-            'ultimaColeta': l.ultimaColeta?.toUtc().toIso8601String(),
           },
       ],
       'composicaoGeral': {
-        for (final e in soma.entries)
-          e.key.label: total == 0 ? 0 : (e.value / total * 100).round(),
+          "quantPlastico": (somaPlastico * 100) / soma,
+          "quantVidro": (somaVidro * 100) / soma,
+          "quantMetal": (somaMetal * 100) / soma,
+          "quantPapel": (somaPapel * 100) / soma
+          // "Papel": (l.composicao['quantPapel']! * 100) / l.quantidadeResiduo
       },
       'ranking': [
-        if (instId != null)
-          for (final r in db.ranking(instId))
-            {'nome': r.coletor.nome, 'coletas': r.coletas},
+        if (ranking.isEmpty)
+          for (final r in ranking)
+            {'nome': r.coletor.nomeUsuario, 'coletas': r.coletas},
       ],
       'atividades': [
         for (final v in visitas.take(10))
@@ -138,3 +161,8 @@ class CicloService {
     };
   }
 }
+
+      // 'composicaoGeral': {
+      //   for (final e in soma.entries)
+      //     e.key.label: total == 0 ? 0 : (e.value / total * 100).round(),
+      // },

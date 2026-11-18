@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:gru/providers/auth_provider.dart';
+import 'package:gru/providers/lixeira_provider.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/config/api_config.dart';
 import '../models/ciclo_model.dart';
 import '../models/lixeira_model.dart';
-import 'mock_data_service.dart';
+// import 'mock_data_service.dart';
 
 class CicloException implements Exception {
   CicloException(this.mensagem);
@@ -76,26 +78,22 @@ class CicloService {
       ((l.statusLixeira.codigo + 1) * 20);
 
   /// Monta o snapshot com os MESMOS dados/fórmulas dos gráficos do site.
-  static Map<String, dynamic> montarSnapshot() {
-    final db = MockDataService.instance;
-    final lixeiras = db.lixeiras;
-    final sensores = MockDataService.sensores;
-    final coletores = MockDataService.coletores;
+  static Map<String, dynamic> montarSnapshot(AuthProvider userProvider, LixeiraProvider lixeiraProvider) {
+    // final db = MockDataService.instance;
+    final lixeiras = lixeiraProvider.lixeiras;
+    // final sensores = MockDataService.sensores;
+    final coletores = userProvider.coletores;
 
-    final media = lixeiras.isEmpty
-        ? 0
-        : (lixeiras.map(ocupacaoDoGrafico).reduce((a, b) => a + b) /
-                lixeiras.length)
-            .round();
+    final media = lixeiras.isEmpty ? 0 : (lixeiras.map(ocupacaoDoGrafico).reduce((a, b) => a + b) / lixeiras.length).round();
 
     // Composição geral ponderada pela ocupação de cada lixeira.
-    final soma = <String, double>{};
-    for (final l in lixeiras) {
-      final comp = sensores[l.id]?.composicao ?? const <String, int>{};
-      comp.forEach((tipo, pct) =>
-          soma[tipo] = (soma[tipo] ?? 0) + ocupacaoDoGrafico(l) * pct / 100);
-    }
-    final total = soma.values.fold<double>(0, (a, b) => a + b);
+    // final soma = <String, double>{};
+    // for (final l in lixeiras) {
+    //   final comp = l.composicao ?? const <String, int>{};
+    //   comp.forEach((tipo, pct) =>
+    //       soma[tipo] = (soma[tipo] ?? 0) + ocupacaoDoGrafico(l) * pct / 100);
+    // }
+    // final total = soma.values.fold<double>(0, (a, b) => a + b);
 
     return {
       'instituicao': 'Minha instituição',
@@ -113,23 +111,21 @@ class CicloService {
         for (final l in lixeiras)
           {
             'id': l.id,
-            'nome': l.nome,
+            'nome': l.nomeLixeira,
             'endereco': l.enderecoLixeira,
             'ocupacao': ocupacaoDoGrafico(l),
             'status': l.statusLixeira.label,
-            'composicao': sensores[l.id]?.composicao ?? const <String, int>{},
-            'ultimaColeta':
-                sensores[l.id]?.ultimaColeta.toUtc().toIso8601String(),
+            // 'composicao': sensores[l.id]?.composicao ?? const <String, int>{},
           },
       ],
-      'composicaoGeral': {
-        for (final e in soma.entries)
-          e.key: total == 0 ? 0 : (e.value / total * 100).round(),
-      },
+      // 'composicaoGeral': {
+      //   for (final e in soma.entries)
+      //     e.key: total == 0 ? 0 : (e.value / total * 100).round(),
+      // },
       'ranking': [
         for (final c in [...coletores]
           ..sort((a, b) => b.coletasRealizadas.compareTo(a.coletasRealizadas)))
-          {'nome': c.nome, 'coletas': c.coletasRealizadas},
+          {'nome': c.nomeUsuario, 'coletas': c.coletasRealizadas},
       ],
       // Mesmas atividades mostradas no card "Atividades recentes".
       'atividades': const [
